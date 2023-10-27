@@ -1,0 +1,156 @@
+/* app.css 
+добавить: сложность медиум (4,6,9 для 36 и тд), картинки вместо цифр, звуки, темную тему, изменить оформление
+*/
+body {
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 85vh;
+  background-color: #f0f0f0; 
+}
+
+.App {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center; 
+  text-align: center;
+}
+
+
+.tile {
+  width: 50px;
+  height: 50px;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  background-color: transparent; 
+  border-color: black; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  margin: 1px;
+  /*opacity: 1;
+  visibility: visible;
+  transition-delay: 0.2s;
+  transition: background-color 0.5s ease-in-out;
+  
+  &.hide {
+    background-color: transparent;
+    transition: background-color 0.5s ease-in-out;
+  }*/
+}
+
+.hidden {
+  opacity: 0;
+}
+
+.display-text {
+  margin-top: 5px;
+  text-align: center;
+}
+
+.shape-block { 
+  width: 50px;
+  height: 50px;
+  position: absolute;
+  border: 1px double #ccc;
+  border-radius: 10px;
+}
+
+
+.scoreboard {
+  position: absolute;
+  top: -60px;  
+  z-index: 1; 
+  user-select: none;
+  cursor: default;
+  font-size: 24px;
+  color: #fff;
+  background-color: rgba(0, 0, 0, 0.7);
+  border: 1px solid #ccc;
+  padding: 5px 10px;
+  border-radius: 5px;
+}
+
+.settings-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 20px;
+  background: white;
+  border: 2px solid #333;
+  border-radius: 5px;
+  max-width: 300px;
+}
+
+.close-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  cursor: pointer;
+}
+
+h2 {
+  margin: 0;
+  font-size: 18px;
+  margin-bottom: 10px;
+}
+
+label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+select {
+  width: 100%;
+  padding: 5px;
+  margin-bottom: 10px;
+}
+
+button {
+  display: block;
+  width: 100%;
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 10px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.settings-dialog label,
+.settings-dialog select,
+.settings-dialog button {
+  display: block;
+}
+
+button:hover {
+  background-color: #555; 
+}
+
+button:active {
+  background-color: #333; 
+}
+
+.reset-button {
+  right: 50px;
+}
+
+.theme-button {
+  left: 50px;  
+}
+
+.gameboard {
+  width: 550px;
+  height: 550px; 
+  position: relative;
+  border: 5px solid black;
+  padding: 10px;
+  boxSizing: border-box;
+  zIndex: 1;
+}
