@@ -1,6 +1,42 @@
 import React, { useState, useEffect } from "react";
 import './App.css';
 
+//уровни сложности, используются при рендере настроек (селекторов)
+//и при генерации игрового поля
+const difficulties = {
+  "4": {
+    Easy: 2,
+    Medium: 4,
+    Hard: 8,
+  },
+  "6": {
+    Easy: 4,
+    Medium: 6,
+    Hard: 9,
+  },
+  "8": {
+    Easy: 4,
+    Medium: 8,
+    Hard: 16,
+  },
+  /*"10": {
+    Easy: 5,
+    Medium: 10,
+    Hard: 25,
+  }*/
+};
+
+//Темы из 16 картинок, будут отображаться по индексу вместо чисел grid
+const pictures = {
+  Fruits: ["🍎", "🍌", "🍇", "🍓", "🍊", "🍉", "🍍", "🥭", "🥑", "🍒", "🥝", "🍈", "🍑", "🍋", "🥥", "🍏"],
+  Cars: ["🚗", "🚕", "🚙", "🏎️", "🚓", "🚑", "🚒", "🚐", "🚚", "🚛", "🚜", "🛵", "🏍️", "🚲", "🛴", "🚍"],
+  Nature: ["🌿", "🌲", "🌹", "🌻", "🌷", "🌸", "🍁", "🌺", "🌼", "🍂", "🍀", "🍄", "🍃", "🌳", "🌰", "🏞️"],
+  Animals: ["🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐨", "🐯", "🦁", "🐮", "🐷", "🐸", "🐵", "🐔", "🦆"],
+  Emojis: ["😃", "😍", "🤣", "😎", "😁", "😄", "😅", "😆", "😂", "😊", "😇", "🥰", "😋", "🤩", "🤗", "🙂"],
+  Sports: ["⚽", "🏀", "🏈", "⚾", "🎾", "🏐", "🏉", "🎱", "🏓", "🏸", "🥊", "🏹", "🎿", "🏂", "🪁", "🏋️"],
+}
+
+//генерирует новую сетку клеток на основе длины строки и сложности из gameStats
 const generateNewGrid = (arraySize, difficulty) => {
 
   //перемешивает значения одномерного массива и возвращает матрицу на основе rowLength
@@ -21,9 +57,9 @@ const generateNewGrid = (arraySize, difficulty) => {
     return shuffledMatrix;
   }
 
-  //если легкая сложность - количество пар элементов в массиве равно количеству строк
-  //иначе, если 4х4 - 8 пар, если больше - кол-во элементов / 4
-  const edge = difficulty === "Easy" ? arraySize : (arraySize === 4 ? arraySize * 2 : (arraySize / 2) * (arraySize / 2));
+//количество уникальных элементов (ребро) берется из объекта difficulties
+  const edge = difficulties[arraySize.toString()][difficulty];
+
   //на основе ребра заполяем одномерный массив от 1 до длины ребра
   const values = Array.from({ length: edge }, (_, index) => index + 1); 
   const pairedValues = [];
@@ -48,18 +84,19 @@ const generateNewGrid = (arraySize, difficulty) => {
 export default function App() {
   
   const [showSettings, setShowSettings] = useState(false);
-  const [grid, setGrid] = useState(generateNewGrid(4,"Easy"));
+  const [grid, setGrid] = useState(generateNewGrid(4,"Medium"));
   const [gameStats, setGameStats] = useState({
       firstSelected: null, //запоминаем последние две открытые клетки
       secondSelected: null,
       block: false, //для пауз, блокирует нажатия на клетки
-    gridSize: 4, //размер поля N*N
-    difficulty: "Easy",
+    gridSize: 4, //размер поля - N*N
+    difficulty: "Medium",
+    theme: "Fruits",
     tileCounter: 0, //счетчик открытых клеток, при gridSize*gridSize - победа
   });
   //временные значения для окна настроек
   const [tempGameStats, setTempGameStats] = useState({
-    gridSize: gameStats.gridsize,
+    gridSize: gameStats.gridSize,
     difficulty: gameStats.difficulty,
   })
   //текст под игровой сеткой выводится
@@ -160,11 +197,24 @@ export default function App() {
     }
   }, [gameStats.tileCounter, gameStats.gridSize]);
 
+  //смена темы - устанавливается следующее по кругу значение из pictures в gameStats
+  const changeTheme = () => {
+    const themes = Object.keys(pictures);
+    const totalThemes = themes.length;
+    const currentThemeIndex = themes.indexOf(gameStats.theme);
+    const nextThemeIndex = (currentThemeIndex + 1) % totalThemes; // переход к следующей теме
+    const nextTheme = themes[nextThemeIndex];
+
+    setDisplayText(`Current theme: ${nextTheme}`);
+    setGameStats(prevGameStats => ({ ...prevGameStats, theme: nextTheme }));
+  };
+
   return (
     <div>
 
+      <div id="button-container" style={{ display: "flex" }}>
       {/* кнопка для открытия окна настроек */}
-      <button onClick={() => {
+      <button id="settings-button" onClick={() => {
       //открывает окно, запоминает временные настройки, блокирует игру
         setShowSettings(!showSettings);
         setTempGameStats({ gridSize: gameStats.gridSize, difficulty: gameStats.difficulty });
@@ -173,9 +223,16 @@ export default function App() {
       Settings
       </button>
 
+      {/* кнопка для смены темы */}
+      <button id="theme-button" onClick={() => changeTheme()}>
+      Theme
+      </button>
+        </div>
+
       {/* всплывающее окно настроек */}
       {showSettings && (
         <div className="settings-dialog">
+          <div className="settings-header">
           <span className="close-button" onClick={() => {
           //кнока закрыть закрывает окно и разблокирует игру
             setShowSettings(false);
@@ -184,25 +241,47 @@ export default function App() {
             &#10006;
           </span>
           <h2>Settings</h2>
+          </div>
           <label>Field Size:</label>
+          {/* селектор размера поля */}
           <select 
             value={tempGameStats.gridSize} 
-            onChange={(event) => setTempGameStats({ ...tempGameStats, gridSize: event.target.value })}
-          >
-            <option value="4">4</option>
-            <option value="6">6</option>
-            <option value="8">8</option>
-          </select>
-          <label>Difficulty:</label>
-          <select 
-            value={tempGameStats.difficulty} 
             onChange={(event) => {
-              setTempGameStats({ ...tempGameStats, difficulty: event.target.value });
+              const newGridSize = event.target.value;
+              const newDifficulty = newGridSize === "4" ? "Easy" : tempGameStats.difficulty;
+              setTempGameStats({ gridSize: newGridSize, difficulty: newDifficulty });
             }}
           >
-            <option value="Easy">Easy</option>
-            <option value="Hard">Hard</option>
+            {[4, 6, 8].map((size, index) => (
+              <option key={index} value={size}>
+                {size}
+              </option>
+            ))}
           </select>
+          <label>Difficulty (Unique elements):</label>
+          {/* селектор сложности - количества уникальных элементов */}
+          <select
+            value={tempGameStats.difficulty}
+            onChange={(event) => {
+              const newDifficulty = event.target.value;
+              setTempGameStats((prevStats) => ({
+                ...prevStats,
+                difficulty: newDifficulty,
+              }));
+            }}
+          >
+            {/* маппим опции в селекте через объект difficulties */}
+            {Object.keys(difficulties[tempGameStats.gridSize.toString()]).map(
+              (difficulty, index) => (
+                <option key={index} value={difficulty}>
+                  {difficulty} (
+                  {difficulties[tempGameStats.gridSize.toString()][difficulty]})
+                </option>
+              )
+            )}
+          </select>
+
+          {/* кнопка Reset */}
           <button onClick={() => {
             setGameStats({
               ...gameStats,
@@ -217,25 +296,26 @@ export default function App() {
       )}
 
       <div>
+        
       {/* основное игровое поле */}
+
       {grid.map((rowArr, rowIndex) => (
         <div key={rowIndex} style={{ display: "flex" }}>
           {rowArr.map((cell, colIndex) => (
             <div
               className={`tile`}
               key={colIndex}
-              style={{
-                backgroundColor: "transparent",
-                borderColor: "black",
-              }}
               onClick={() => !gameStats.block && onClickTile(rowIndex, colIndex)}
             >
-              {cell.hidden ? null : cell.value}
+              <div className="tile-picture" style={{opacity: cell.hidden ? 0 : 1}}>
+              {cell.hidden ? null : pictures[gameStats.theme][cell.value-1]}
+                </div>
             </div>
           ))}
         </div>
       ))}
         </div>
+
 
       <div className="display-text">
         {displayText}

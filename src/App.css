@@ -1,5 +1,5 @@
 /* app.css 
-добавить: сложность медиум (4,6,9 для 36 и тд), картинки вместо цифр, звуки, темную тему, изменить оформление
+добавить: картинки вместо цифр, звуки, темную тему, изменить оформление
 */
 body {
   margin: 0;
@@ -7,7 +7,7 @@ body {
   justify-content: center;
   align-items: center;
   min-height: 85vh;
-  background-color: #f0f0f0; 
+  background-color: #f0f0f0;
 }
 
 .App {
@@ -27,15 +27,15 @@ body {
   border: 1px solid #ccc;
   border-radius: 10px;
   background-color: transparent; 
-  border-color: black; 
   display: flex; 
   align-items: center; 
   justify-content: center; 
   margin: 1px;
+  font-size: 25px;
   /*opacity: 1;
   visibility: visible;
   transition-delay: 0.2s;
-  transition: background-color 0.5s ease-in-out;
+  
   
   &.hide {
     background-color: transparent;
@@ -43,8 +43,9 @@ body {
   }*/
 }
 
-.hidden {
-  opacity: 0;
+.tile-picture {
+  transition-delay: 0.2s;
+  transition: opacity 0.5s ease; 
 }
 
 .display-text {
@@ -52,32 +53,14 @@ body {
   text-align: center;
 }
 
-.shape-block { 
-  width: 50px;
-  height: 50px;
-  position: absolute;
-  border: 1px double #ccc;
-  border-radius: 10px;
-}
-
-
-.scoreboard {
-  position: absolute;
-  top: -60px;  
-  z-index: 1; 
-  user-select: none;
-  cursor: default;
-  font-size: 24px;
-  color: #fff;
-  background-color: rgba(0, 0, 0, 0.7);
-  border: 1px solid #ccc;
-  padding: 5px 10px;
-  border-radius: 5px;
+#settings-button, #theme-button {
+  margin: 5px 5px 5px 10px; 
 }
 
 .settings-dialog {
-  position: fixed;
-  top: 50%;
+  position: absolute;
+  overflow: hidden;
+  top: 45%;
   left: 50%;
   transform: translate(-50%, -50%);
   padding: 20px;
@@ -87,18 +70,28 @@ body {
   max-width: 300px;
 }
 
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
 .close-button {
   position: absolute;
   top: 10px;
   right: 10px;
   cursor: pointer;
+  font-size: 24px;
 }
 
 h2 {
   margin: 0;
-  font-size: 18px;
+  font-size: 24px;
   margin-bottom: 10px;
+  top: 50%;
+  transform: translateY(-25%);
 }
+
 
 label {
   display: block;
@@ -115,7 +108,7 @@ select {
 button {
   display: block;
   width: 100%;
-  background: #007bff;
+  background: forestgreen;
   color: white;
   border: none;
   padding: 10px;
@@ -130,11 +123,11 @@ button {
 }
 
 button:hover {
-  background-color: #555; 
+  background-color: green; 
 }
 
 button:active {
-  background-color: #333; 
+  background-color: darkgreen; 
 }
 
 .reset-button {
@@ -146,11 +139,13 @@ button:active {
 }
 
 .gameboard {
-  width: 550px;
-  height: 550px; 
+  width: 100%;
+  height: 100%; 
   position: relative;
-  border: 5px solid black;
+  border: 3px solid black;
+  border-radius: 10px;
   padding: 10px;
+  margin: auto;
   boxSizing: border-box;
   zIndex: 1;
 }
