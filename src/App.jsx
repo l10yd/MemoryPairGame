@@ -1,99 +1,52 @@
 import React, { useState, useEffect } from "react";
+import difficulties from "./Difficulties"; //уровни сложности
+import pictures from "./Pictures"; //картинки, по 16 на каждую тему
+import messages from "./Messages"; //сообщения об успехе или ошибке
+import { shuffleArray, shufflePictures, generateNewGrid } from "./GameUtils"; //функции для генерации игрового поля и перемешивания картинок
 import './App.css';
 
-//уровни сложности, используются при рендере настроек (селекторов)
-//и при генерации игрового поля
-const difficulties = {
-  "4": {
-    Easy: 2,
-    Medium: 4,
-    Hard: 8,
+const languages = {
+  english: {
+    settings: 'Settings',
+    theme: 'Theme',
+    fieldSize: 'Field Size',
+    fieldSizeMsg: "Size",
+    difficulty: 'Difficulty (Unique elements)',
+    difficultyMsg: 'Difficulty',
+    reset: 'Reset',
+    language: "Language",
+    name: "English",
+    currentThemeMsg: "Current theme: ",
   },
-  "6": {
-    Easy: 4,
-    Medium: 6,
-    Hard: 9,
+  russian: {
+    settings: 'Настройки',
+    theme: 'Тема',
+    fieldSize: 'Размер поля',
+    fieldSizeMsg: "Поле",
+    difficulty: 'Сложность (Уникальные элементы)',
+    difficultyMsg: 'Сложность',
+    reset: 'Сброс',
+    language: "Язык",
+    name: "Русский",
+    currentThemeMsg: "Выбрана тема: ",
   },
-  "8": {
-    Easy: 4,
-    Medium: 8,
-    Hard: 16,
-  },
-  /*"10": {
-    Easy: 5,
-    Medium: 10,
-    Hard: 25,
-  }*/
 };
 
-//Темы из 16 картинок, будут отображаться по индексу вместо чисел grid
-const pictures = {
-  Fruits: ["🍎", "🍌", "🍇", "🍓", "🍊", "🍉", "🍍", "🥭", "🥑", "🍒", "🥝", "🍈", "🍑", "🍋", "🥥", "🍏"],
-  Cars: ["🚗", "🚕", "🚙", "🏎️", "🚓", "🚑", "🚒", "🚐", "🚚", "🚛", "🚜", "🛵", "🏍️", "🚲", "🛴", "🚍"],
-  Nature: ["🌿", "🌲", "🌹", "🌻", "🌷", "🌸", "🍁", "🌺", "🌼", "🍂", "🍀", "🍄", "🍃", "🌳", "🌰", "🏞️"],
-  Animals: ["🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐨", "🐯", "🦁", "🐮", "🐷", "🐸", "🐵", "🐔", "🦆"],
-  Emojis: ["😃", "😍", "🤣", "😎", "😁", "😄", "😅", "😆", "😂", "😊", "😇", "🥰", "😋", "🤩", "🤗", "🙂"],
-  Sports: ["⚽", "🏀", "🏈", "⚾", "🎾", "🏐", "🏉", "🎱", "🏓", "🏸", "🥊", "🏹", "🎿", "🏂", "🪁", "🏋️"],
-}
-
-//генерирует новую сетку клеток на основе длины строки и сложности из gameStats
-const generateNewGrid = (arraySize, difficulty) => {
-
-  //перемешивает значения одномерного массива и возвращает матрицу на основе rowLength
-  function shuffleMatrix(arr, rowLength) {
-    const shuffled = [...arr];
-    //перемешиваем одномерный массив
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-
-    const shuffledMatrix = [];
-    //нарезаем перемешанный одномерный массив равномерными частями и наполняем двумерный массив
-    for (let i = 0; i < arr.length / rowLength; i++) {
-      shuffledMatrix.push(shuffled.slice(i * rowLength, (i + 1) * rowLength));
-    }
-
-    return shuffledMatrix;
-  }
-
-//количество уникальных элементов (ребро) берется из объекта difficulties
-  const edge = difficulties[arraySize.toString()][difficulty];
-
-  //на основе ребра заполяем одномерный массив от 1 до длины ребра
-  const values = Array.from({ length: edge }, (_, index) => index + 1); 
-  const pairedValues = [];
-  //дублируем этот одномерный массив, пока кол-во элементов не будет равно площади квадрата
-  while (pairedValues.length < arraySize * arraySize) {
-    pairedValues.push(...values);
-  }
-  //перемешиваем одномерный массив и получаем двумерный
-  const shuffledValues = shuffleMatrix(pairedValues, arraySize); 
-  //добавляем в него флаги hidden, получается основа для игровой сетки
-  const initialGrid = shuffledValues.map(row =>
-      row.map(value => ({
-        hidden: true,
-        value: value,
-      }))
-    );
-  
-  return initialGrid;
-
-}
 
 export default function App() {
   
   const [showSettings, setShowSettings] = useState(false);
-  const [grid, setGrid] = useState(generateNewGrid(4,"Medium"));
+  const [grid, setGrid] = useState([]);
   const [gameStats, setGameStats] = useState({
-      firstSelected: null, //запоминаем последние две открытые клетки
-      secondSelected: null,
-      block: false, //для пауз, блокирует нажатия на клетки
-    gridSize: 4, //размер поля - N*N
-    difficulty: "Medium",
-    theme: "Fruits",
-    tileCounter: 0, //счетчик открытых клеток, при gridSize*gridSize - победа
+    firstSelected: null,
+    secondSelected: null,
+    block: false,
+    gridSize: 4,
+    difficulty: 'Medium',
+    theme: 'Fruits',
+    tileCounter: 0,
   });
+  
   //временные значения для окна настроек
   const [tempGameStats, setTempGameStats] = useState({
     gridSize: gameStats.gridSize,
@@ -101,6 +54,50 @@ export default function App() {
   })
   //текст под игровой сеткой выводится
   const [displayText, setDisplayText] = useState(`Size: ${gameStats.gridSize}x${gameStats.gridSize}, Difficulty: ${gameStats.difficulty}.`);
+  //картинки хранятся в отдельном объекте, но будут перемешиватсья при ресете
+  const [pics, setPics] = useState([]);
+  //смена языка
+  const [currentLanguage, setCurrentLanguage] = useState('english');
+
+  //для смены языка
+  const toggleLanguage = (lang) => {
+    setCurrentLanguage(lang);
+    localStorage.setItem('language', lang);
+  };
+
+  useEffect(() => {
+    const savedPictures = JSON.parse(localStorage.getItem('pics'));
+    if(savedPictures) {
+      setPics(savedPictures)
+    }
+    else {
+      const pics = shufflePictures(pictures);
+      setPics(pics);
+      localStorage.setItem('pics', JSON.stringify(pics));
+    }
+    // Получаем и устанавливаем grid из localStorage
+    const savedGrid = JSON.parse(localStorage.getItem('grid'));
+    if (savedGrid) {
+      setGrid(savedGrid);
+    } else {
+      const newGrid = generateNewGrid(4, 'Medium');
+      setGrid(newGrid);
+      localStorage.setItem('grid', JSON.stringify(newGrid));
+    }
+
+    // Получаем и устанавливаем gameStats из localStorage
+    const savedGameStats = JSON.parse(localStorage.getItem('gameStats'));
+    if (savedGameStats) {
+      //блок снимаем на всякий случай
+      setGameStats((prevGameStats) => ({ ...savedGameStats, block: false }));
+    }
+//загрузка языка
+    const savedLanguage = localStorage.getItem('language');
+    if(savedLanguage) {
+      setCurrentLanguage(savedLanguage);
+    }
+
+  }, []); 
 
   //перезагрузка игры с сохранением настроек
   const gameReset = () => {
@@ -118,8 +115,15 @@ export default function App() {
       difficulty: newDifficulty, 
     }));
 
-    setGrid(generateNewGrid(newGridSize, newDifficulty)); 
-    setDisplayText(`Size: ${newGridSize}x${newGridSize}, Difficulty: ${newDifficulty}.`);
+    localStorage.setItem('gameStats', JSON.stringify(gameStats));
+
+    const newGrid = generateNewGrid(newGridSize, newDifficulty);
+    setGrid(newGrid); 
+    localStorage.setItem('grid', JSON.stringify(newGrid));
+    
+    setDisplayText(`${languages[currentLanguage].fieldSizeMsg}: ${newGridSize}x${newGridSize}, ${languages[currentLanguage].difficultyMsg}: ${newDifficulty}.`);
+    //перемешиваем картинки при перезапуске
+    setPics(shufflePictures(pictures));
     //окно настроек закрываем
     setShowSettings(false);
   }
@@ -131,6 +135,7 @@ export default function App() {
       const updatedGrid = [...grid];
       updatedGrid[rowIndex][colIndex] = { ...updatedGrid[rowIndex][colIndex], hidden: false };
       setGrid(updatedGrid);
+      localStorage.setItem('grid', JSON.stringify(updatedGrid));
 
       if (gameStats.firstSelected === null) {
         //выбрана первая ячейка
@@ -139,6 +144,7 @@ export default function App() {
         //выбрана вторая ячейка
         setGameStats(prevGameStats => ({ ...prevGameStats, secondSelected: { rowIndex, colIndex } }));
       }
+      localStorage.setItem('gameStats', JSON.stringify(gameStats));
     }
   };
 
@@ -155,17 +161,28 @@ export default function App() {
       if (firstCell.value === secondCell.value) {
         // Совпадение
         setGameStats(prevGameStats => ({ ...prevGameStats, tileCounter: prevGameStats.tileCounter+2 }));
-        setDisplayText("Nice!");
+        localStorage.setItem('gameStats', JSON.stringify(gameStats));
+        //выбирает случайное значение из объекта messages в соответствии с выбранным языком
+        const randomSuccessMessage =
+          messages[currentLanguage].Success[Math.floor(Math.random() * messages[currentLanguage].Success.length)];
+        setDisplayText(randomSuccessMessage);
+
       //иначе - блокирует игру на таймаут, потом закрывает эти 2 клетки обратно      
       } else {
-        setDisplayText("Oof..");
+        //выбирает случайное значение из объекта messages в соответствии с выбранным языком
+        const randomErrorMessage =
+          messages[currentLanguage].Error[Math.floor(Math.random() * messages[currentLanguage].Error.length)];
+        setDisplayText(randomErrorMessage);
         //блок игры
         setGameStats(prevGameStats => ({ ...prevGameStats, block: true }));
+        localStorage.setItem('gameStats', JSON.stringify(gameStats));
         setTimeout(() => {
           //прячет клетки
           firstCell.hidden = true;
           secondCell.hidden = true;
-          setGrid([...grid]);
+          const newGrid = [...grid]
+          setGrid(newGrid);
+          localStorage.setItem('grid', JSON.stringify(newGrid));
           setGameStats(prevGameStats => ({
             ...prevGameStats,
             //сброс 2х выбранных клеток
@@ -174,6 +191,7 @@ export default function App() {
             //разблокирует игру
             block: false
           }));
+          localStorage.setItem('gameStats', JSON.stringify(gameStats));
         }, 1000);
       }
       // сброс клеток в любом случае
@@ -182,6 +200,7 @@ export default function App() {
         firstSelected: null,
         secondSelected: null
       }));
+      localStorage.setItem('gameStats', JSON.stringify(gameStats));
     }
   }, [grid]);
 
@@ -205,45 +224,51 @@ export default function App() {
     const nextThemeIndex = (currentThemeIndex + 1) % totalThemes; // переход к следующей теме
     const nextTheme = themes[nextThemeIndex];
 
-    setDisplayText(`Current theme: ${nextTheme}`);
+    setDisplayText(`${languages[currentLanguage].currentThemeMsg}${nextTheme}`);
     setGameStats(prevGameStats => ({ ...prevGameStats, theme: nextTheme }));
+    localStorage.setItem('gameStats', JSON.stringify(gameStats));
   };
 
   return (
     <div>
 
       <div id="button-container" style={{ display: "flex" }}>
-      {/* кнопка для открытия окна настроек */}
-      <button id="settings-button" onClick={() => {
-      //открывает окно, запоминает временные настройки, блокирует игру
-        setShowSettings(!showSettings);
-        setTempGameStats({ gridSize: gameStats.gridSize, difficulty: gameStats.difficulty });
-        setGameStats(prevGameStats => ({ ...prevGameStats, block: !prevGameStats.block }));
-      }}>
-      Settings
-      </button>
+        <button id="settings-button" onClick={() => {
+          setShowSettings(!showSettings);
+          setTempGameStats({ gridSize: gameStats.gridSize, difficulty: gameStats.difficulty });
+          setGameStats(prevGameStats => ({ ...prevGameStats, block: !prevGameStats.block }));
+        }}>
+          {languages[currentLanguage].settings}
+        </button>
 
-      {/* кнопка для смены темы */}
-      <button id="theme-button" onClick={() => changeTheme()}>
-      Theme
-      </button>
-        </div>
+        <button id="theme-button" onClick={() => changeTheme()}>
+          {languages[currentLanguage].theme}
+        </button>
+      </div>
 
-      {/* всплывающее окно настроек */}
       {showSettings && (
         <div className="settings-dialog">
           <div className="settings-header">
-          <span className="close-button" onClick={() => {
-          //кнока закрыть закрывает окно и разблокирует игру
-            setShowSettings(false);
-            setGameStats(prevGameStats => ({ ...prevGameStats, block: false }));
-          }}>
-            &#10006;
-          </span>
-          <h2>Settings</h2>
+            <span className="close-button" onClick={() => {
+              setShowSettings(false);
+              setGameStats(prevGameStats => ({ ...prevGameStats, block: false }));
+            }}>
+              &#10006;
+            </span>
+            <h2>{languages[currentLanguage].settings}</h2>
           </div>
-          <label>Field Size:</label>
-          {/* селектор размера поля */}
+          <label>{languages[currentLanguage].language}:</label>
+          <select
+            value={currentLanguage}
+            onChange={(e) => toggleLanguage(e.target.value)}
+          >
+            {Object.keys(languages).map((lang, index) => (
+              <option key={index} value={lang}>
+                {languages[lang].name}
+              </option>
+            ))}
+          </select>
+          <label>{languages[currentLanguage].fieldSize}:</label>
           <select 
             value={tempGameStats.gridSize} 
             onChange={(event) => {
@@ -258,8 +283,7 @@ export default function App() {
               </option>
             ))}
           </select>
-          <label>Difficulty (Unique elements):</label>
-          {/* селектор сложности - количества уникальных элементов */}
+          <label>{languages[currentLanguage].difficulty}:</label>
           <select
             value={tempGameStats.difficulty}
             onChange={(event) => {
@@ -270,7 +294,6 @@ export default function App() {
               }));
             }}
           >
-            {/* маппим опции в селекте через объект difficulties */}
             {Object.keys(difficulties[tempGameStats.gridSize.toString()]).map(
               (difficulty, index) => (
                 <option key={index} value={difficulty}>
@@ -281,7 +304,6 @@ export default function App() {
             )}
           </select>
 
-          {/* кнопка Reset */}
           <button onClick={() => {
             setGameStats({
               ...gameStats,
@@ -290,38 +312,35 @@ export default function App() {
             });
             gameReset();
           }}>
-          Reset
+            {languages[currentLanguage].reset}
           </button>
         </div>
       )}
 
-      <div>
-        
-      {/* основное игровое поле */}
+      <div style={{}}>
 
-      {grid.map((rowArr, rowIndex) => (
-        <div key={rowIndex} style={{ display: "flex" }}>
-          {rowArr.map((cell, colIndex) => (
-            <div
-              className={`tile`}
-              key={colIndex}
-              onClick={() => !gameStats.block && onClickTile(rowIndex, colIndex)}
-            >
-              <div className="tile-picture" style={{opacity: cell.hidden ? 0 : 1}}>
-              {cell.hidden ? null : pictures[gameStats.theme][cell.value-1]}
+        {grid.map((rowArr, rowIndex) => (
+          <div key={rowIndex} style={{ display: "flex" }}>
+            {rowArr.map((cell, colIndex) => (
+              <div
+                className={`tile`}
+                key={colIndex}
+                onClick={() => !gameStats.block && onClickTile(rowIndex, colIndex)}
+              >
+                <div className="tile-picture" style={{opacity: cell.hidden ? 0 : 1}}>
+                  {cell.hidden ? null : pics[gameStats.theme][cell.value-1]}
                 </div>
-            </div>
-          ))}
-        </div>
-      ))}
-        </div>
+              </div>
+            ))}
+          </div>
+        ))}
 
+      </div>
 
       <div className="display-text">
         {displayText}
       </div>
 
-      
     </div>
   );
 }
