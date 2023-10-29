@@ -41,15 +41,6 @@ body {
   justify-content: center; 
   margin: 1px;
   font-size: 25px;
-  /*opacity: 1;
-  visibility: visible;
-  transition-delay: 0.2s;
-  
-  
-  &.hide {
-    background-color: transparent;
-    transition: background-color 0.5s ease-in-out;
-  }*/
 }
 
 .tile-picture {

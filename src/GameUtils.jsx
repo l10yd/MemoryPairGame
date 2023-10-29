@@ -33,19 +33,19 @@ const shufflePictures = (pictures) => {
 //генерирует новую сетку клеток на основе длины строки и сложности из gameStats
 const generateNewGrid = (arraySize, difficulty) => {
 
-//количество уникальных элементов (ребро) 
-  const edge = difficulty;
+  //заполняем одномерный массив числами от 1 до difficulty (кол-во уникальных элементов)
+  const values = Array.from({ length: difficulty }, (_, index) => index + 1); 
 
-  //на основе ребра заполяем одномерный массив от 1 до длины ребра
-  const values = Array.from({ length: edge }, (_, index) => index + 1); 
+  //наполняем еще один массив парами элементов из values, пока его длина не будет равна площади игрового поля (1,1,2,2 и тд)
+  const pairedValues = Array.from({ length: (arraySize * arraySize) / 2 }, (_, i) => [values[i % difficulty], values[i % difficulty]]).flat();
 
-  //дублируем этот одномерный массив, пока кол-во элементов не будет равно площади квадрата
-  //кривой код, потому что у каждого элемента должна быть пара (для сложности 6х6 / 4)
-  const pairedValues = [];
+  //или можно так
+  /*const pairedValues = [];
   for (let i = 0; i < (arraySize * arraySize)/2; i++) {
     pairedValues.push(values[i % edge]);
     pairedValues.push(values[i % edge]);
-  }
+  }*/
+  
   //перемешиваем одномерный массив 
   const shuffled = shuffleArray(pairedValues);
 

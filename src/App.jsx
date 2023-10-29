@@ -58,6 +58,8 @@ export default function App() {
   const [pics, setPics] = useState([]);
   //смена языка
   const [currentLanguage, setCurrentLanguage] = useState('russian');
+  //размер одной клетки игрового поля
+  const [tileSize, setTileSize] = useState(40); 
 
   //для смены языка
   const toggleLanguage = (lang) => {
@@ -122,21 +124,23 @@ export default function App() {
     const newGameMode = tempGameStats.gameMode;
 
     localStorage.setItem('tempGameStats', JSON.stringify(tempGameStats));
-    
-    setGameStats(prevGameStats => ({
-      ...prevGameStats,
-      firstSelected: null,
-      secondSelected: null,
-      block: false,
-      tileCounter: 0,
-      stepCounter: 0,
-      survivalLifes: parseInt(newGridSize*2, 10), //жизней пока что х2
-      gridSize: newGridSize, 
-      difficulty: newDifficulty, 
-      gameMode: newGameMode,
-    }));
 
-    localStorage.setItem('gameStats', JSON.stringify(gameStats));
+    setGameStats(prevGameStats => {
+      const newGameStats = {
+          ...prevGameStats,
+          firstSelected: null,
+          secondSelected: null,
+          block: false,
+          tileCounter: 0,
+          stepCounter: 0,
+          survivalLifes: parseInt(newGridSize*2, 10), //жизней пока что х2
+          gridSize: newGridSize, 
+          difficulty: newDifficulty, 
+          gameMode: newGameMode,
+        };
+      localStorage.setItem('gameStats', JSON.stringify(newGameStats));
+      return newGameStats;
+    });
 
     const newGrid = generateNewGrid(newGridSize, newDifficulty);
     setGrid(newGrid); 
@@ -183,8 +187,31 @@ export default function App() {
     }
   };
 
+  // функция для обновления размера клеток, вызывается в useEffect при изменении grid или размеров окна
+  const updateTileSize = () => {
+    const gridLength = grid.length;
+    const screenWidth = window.innerWidth;
+    const screenHeight = window.innerHeight;
+
+    // Определение минимальных размеров в зависимости от размера сетки
+    const minTileSize = {
+      4: 74, 
+      6: 50,
+      8: 40, 
+    };
+
+    // Рассчитываем новый размер клетки, который зависит от размера экрана и длины сетки
+     let newTileSize = Math.min((screenWidth / gridLength) * 0.3, (screenHeight / gridLength) * 0.5);
+
+    // Устанавливаем минимальное значение на основе размера сетки
+    newTileSize = Math.max(newTileSize, minTileSize[gridLength] || 40);
+
+    setTileSize(newTileSize);
+  };
+
   //срабатывает после нажатия на любую закрытую клетку
   useEffect(() => {
+    
     const { firstSelected, secondSelected, block } = gameStats;
 
     //если открыты 2 клетки, начинаем сравнивать
@@ -264,6 +291,16 @@ export default function App() {
       });
 
     }
+
+    //заодно меняем размер клеток игрового поля в зависимости от текущих размеров экрана
+    updateTileSize();
+    window.addEventListener('resize', updateTileSize);
+
+    return () => {
+      window.removeEventListener('resize', updateTileSize);
+    };
+
+    
   }, [grid]);
 
   //срабатывает в случае, если счетчик равен площади игрового поля
@@ -287,8 +324,13 @@ export default function App() {
     
     //выводит строку по типу Тема: Фрукты
     setDisplayText(`${languages[currentLanguage].currentThemeMsg}${languages[currentLanguage].pictures[nextTheme] || nextTheme}`);
-    setGameStats(prevGameStats => ({ ...prevGameStats, theme: nextTheme }));
-    localStorage.setItem('gameStats', JSON.stringify(gameStats));
+
+    setGameStats(prevGameStats => {
+      const newGameStats = { ...prevGameStats, theme: nextTheme };
+      localStorage.setItem('gameStats', JSON.stringify(newGameStats));
+      return newGameStats;
+    });
+
   };
 
   //для селекторов настроек (размер поля, сложность, режим игры)
@@ -313,7 +355,7 @@ export default function App() {
         {/** кнопка настроек */}
         <button id="settings-button" onClick={() => {
           setShowSettings(!showSettings);
-          setTempGameStats({ gridSize: gameStats.gridSize, difficulty: gameStats.difficulty, gameMode: gameStats.gameMode });
+
           setGameStats(prevGameStats => ({ ...prevGameStats, block: !prevGameStats.block }));
         }}>
           {languages[currentLanguage].settings}
@@ -408,6 +450,7 @@ export default function App() {
             {rowArr.map((cell, colIndex) => (
               <div
                 className={`tile`}
+                style={{ width: tileSize + 'px', height: tileSize + 'px', fontSize: tileSize > 0 ? tileSize / 2 : 0, }}
                 key={colIndex}
                 onClick={() => !gameStats.block && onClickTile(rowIndex, colIndex)}
               >
