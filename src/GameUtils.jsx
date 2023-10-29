@@ -15,13 +15,23 @@ const shuffleArray = (arr) => {
 //для перемешивания всех картинок, чтобы при перезапуске игры картинки не повторялись
 const shufflePictures = (pictures) => {
   const shuffledPictures = {};
-  //проходим через все темы 
+
   for (const category in pictures) {
     if (pictures.hasOwnProperty(category)) {
-      const originalPictures = pictures[category];
-      shuffledPictures[category] = shuffleArray(originalPictures);
+      const originalCategory = pictures[category];
+      const originalPictures = originalCategory.content;
+
+      // Клонируем и перемешиваем массив картинок
+      const shuffledContent = shuffleArray([...originalPictures]);
+
+      // Создаем новый объект для категории с перемешанным содержимым и языками
+      shuffledPictures[category] = {
+        content: shuffledContent,
+        languages: originalCategory.languages
+      };
     }
   }
+
   return shuffledPictures;
 }
 
@@ -29,7 +39,7 @@ const shufflePictures = (pictures) => {
 const generateNewGrid = (arraySize, difficulty) => {
 
 //количество уникальных элементов (ребро) берется из объекта difficulties
-  const edge = difficulties[arraySize.toString()][difficulty];
+  const edge = difficulties.elements[arraySize.toString()][difficulty];
 
   //на основе ребра заполяем одномерный массив от 1 до длины ребра
   const values = Array.from({ length: edge }, (_, index) => index + 1); 

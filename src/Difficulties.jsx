@@ -1,6 +1,7 @@
 //уровни сложности, используются при рендере настроек (селекторов)
 //и при генерации игрового поля
 const difficulties = {
+  elements: {
   "4": {
     Easy: 2,
     Medium: 4,
@@ -16,11 +17,19 @@ const difficulties = {
     Medium: 8,
     Hard: 16,
   },
-  /*"10": {
-    Easy: 5,
-    Medium: 10,
-    Hard: 25,
-  }*/
+    },
+  languages: {
+    english: {
+      Easy: "Easy",
+      Medium: "Medium",
+      Hard: "Hard",
+    },
+    russian: {
+      Easy: "Легко",
+      Medium: "Средне",
+      Hard: "Хардкор",
+    }
+  }
 };
 
 export default difficulties;
