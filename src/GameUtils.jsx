@@ -19,38 +19,38 @@ const shufflePictures = (pictures) => {
   for (const category in pictures) {
     if (pictures.hasOwnProperty(category)) {
       const originalCategory = pictures[category];
-      const originalPictures = originalCategory.content;
 
       // Клонируем и перемешиваем массив картинок
-      const shuffledContent = shuffleArray([...originalPictures]);
+      const shuffledContent = shuffleArray([...originalCategory]);
 
       // Создаем новый объект для категории с перемешанным содержимым и языками
-      shuffledPictures[category] = {
-        content: shuffledContent,
-        languages: originalCategory.languages
-      };
+      shuffledPictures[category] = shuffledContent;
     }
   }
 
   return shuffledPictures;
-}
+};
+
 
 //генерирует новую сетку клеток на основе длины строки и сложности из gameStats
 const generateNewGrid = (arraySize, difficulty) => {
 
 //количество уникальных элементов (ребро) берется из объекта difficulties
-  const edge = difficulties.elements[arraySize.toString()][difficulty];
+  const edge = difficulties[arraySize.toString()][difficulty];
 
   //на основе ребра заполяем одномерный массив от 1 до длины ребра
   const values = Array.from({ length: edge }, (_, index) => index + 1); 
 
   //дублируем этот одномерный массив, пока кол-во элементов не будет равно площади квадрата
+  //кривой код, потому что у каждого элемента должна быть пара (для сложности 6х6 / 4)
   const pairedValues = [];
-  while (pairedValues.length < arraySize * arraySize) {
-    pairedValues.push(...values);
+  for (let i = 0; i < (arraySize * arraySize)/2; i++) {
+    pairedValues.push(values[i % edge]);
+    pairedValues.push(values[i % edge]);
   }
   //перемешиваем одномерный массив 
   const shuffled = shuffleArray(pairedValues);
+
   //нарезаем перемешанный одномерный массив равномерными частями и наполняем двумерный массив
   const shuffledMatrix = [];
   for (let i = 0; i < arraySize; i++) {
