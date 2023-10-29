@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import difficulties from "./Difficulties"; //уровни сложности
 import pictures from "./Pictures"; //картинки, по 16 на каждую тему
 import messages from "./Messages"; //сообщения об успехе или ошибке
 import languages from "./Languages"; //тексты на разных языках
@@ -15,7 +14,7 @@ export default function App() {
     secondSelected: null, //можно открыть только 2 клетки за раз
     block: false, //блок игры
     gridSize: 4, //длина квадрата поля
-    difficulty: 'Medium', //сложность, влияет на количество уникальных элементов
+    difficulty: 4, //сложность, влияет на количество уникальных элементов
     gameMode: "Classic", //режим игры
     theme: 'Fruits', //выбранная тема из Pictures
     stepCounter: 0, //счетчик шагов, обновляется при открытии 2х клеток, выводится при победе
@@ -54,7 +53,7 @@ export default function App() {
     gameMode: gameStats.gameMode,
   })
   //текст под игровой сеткой выводится
-  const [displayText, setDisplayText] = useState(`Поле: 4х4, Сложность: Средне.`);
+  const [displayText, setDisplayText] = useState(`Поле: 4х4, Сложность: 4.`);
   //картинки хранятся в отдельном объекте, но будут перемешиватсья при ресете
   const [pics, setPics] = useState([]);
   //смена языка
@@ -82,7 +81,7 @@ export default function App() {
     if (savedGrid) {
       setGrid(savedGrid);
     } else {
-      const newGrid = generateNewGrid(4, 'Medium');
+      const newGrid = generateNewGrid(4, 4);
       setGrid(newGrid);
       localStorage.setItem('grid', JSON.stringify(newGrid));
     }
@@ -143,8 +142,8 @@ export default function App() {
     setGrid(newGrid); 
     localStorage.setItem('grid', JSON.stringify(newGrid));
 
-    //Выводит строку по типу Поле: 4x4, Сложность: Легко, Режим: Обычный. - в соответствии с выбранным языком
-    const settingsText = `${languages[currentLanguage].fieldSizeMsg}: ${newGridSize}x${newGridSize}, ${languages[currentLanguage].difficultyMsg}: ${languages[currentLanguage].difficulties[newDifficulty]}, ${languages[currentLanguage].gameModeLabel}:  ${languages[currentLanguage].gameMode[newGameMode]}.`
+    //Выводит строку по типу Поле: 4x4, Сложность: 4, Режим: Обычный. - в соответствии с выбранным языком
+    const settingsText = `${languages[currentLanguage].fieldSizeMsg}: ${newGridSize}x${newGridSize}, ${languages[currentLanguage].difficultyMsg}: ${newDifficulty}, ${languages[currentLanguage].gameModeLabel}:  ${languages[currentLanguage].gameMode[newGameMode]}.`
     setDisplayText(settingsText);
     localStorage.setItem('settingsText', settingsText);
 
@@ -297,8 +296,9 @@ export default function App() {
   const handleSelectChange = (field, value) => {
     setTempGameStats((prevStats) => ({
       ...prevStats,
-      [field]: value,
+      [field]: value,      
     }));
+
   };
 
   return (
@@ -351,7 +351,7 @@ export default function App() {
           <label>{languages[currentLanguage].fieldSize}:</label>
           <select 
             value={tempGameStats.gridSize} 
-            onChange={(event) => handleSelectChange('gridSize', event.target.value)}
+            onChange={(event) => {handleSelectChange('gridSize', event.target.value)}}
           >
             {[4, 6, 8].map((size, index) => (
               <option key={index} value={size}>
@@ -362,19 +362,15 @@ export default function App() {
       
           {/** выбор сложности */}
           <label>{languages[currentLanguage].difficultyLabel}:</label>
-          <select
+          <input
+            type="range"
+            min="2"
+            max={tempGameStats.gridSize === "4" ? 8 : 16}
+            step="1"
             value={tempGameStats.difficulty}
             onChange={(event) => handleSelectChange('difficulty', event.target.value)}
-          >
-            {Object.keys(difficulties[tempGameStats.gridSize.toString()]).map(
-              (difficulty, index) => (
-                <option key={index} value={difficulty}>
-                  {languages[currentLanguage].difficulties[difficulty]} (
-                  {difficulties[tempGameStats.gridSize.toString()][difficulty]})
-                </option>
-              )
-            )}
-          </select>
+          />
+          <span>{tempGameStats.gridSize === "4" && tempGameStats.difficulty > 8 ? "8" : tempGameStats.difficulty}</span>
 
           {/* режим игры */}
           <label>{languages[currentLanguage].gameModeLabel}</label>

@@ -1,6 +1,9 @@
 //уровни сложности, используются при рендере настроек (селекторов)
 //и при генерации игрового поля
-const difficulties = {
+
+//заменил на любые значения от 1 до 16
+
+/*const difficulties = {
   "4": {
     Easy: 2,
     Medium: 4,
@@ -18,4 +21,4 @@ const difficulties = {
   },
 };
 
-export default difficulties;
+export default difficulties;*/

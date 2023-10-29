@@ -1,5 +1,3 @@
-import difficulties from "./Difficulties";
-
 //вспомогательные функции 
 
 //перемешивает одномерный массив, используется в shufflePictures и shuffleMatrix
@@ -35,8 +33,8 @@ const shufflePictures = (pictures) => {
 //генерирует новую сетку клеток на основе длины строки и сложности из gameStats
 const generateNewGrid = (arraySize, difficulty) => {
 
-//количество уникальных элементов (ребро) берется из объекта difficulties
-  const edge = difficulties[arraySize.toString()][difficulty];
+//количество уникальных элементов (ребро) 
+  const edge = difficulty;
 
   //на основе ребра заполяем одномерный массив от 1 до длины ребра
   const values = Array.from({ length: edge }, (_, index) => index + 1); 
