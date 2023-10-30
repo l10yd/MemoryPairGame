@@ -5,26 +5,35 @@ import languages from "./Languages"; //тексты на разных языка
 import { shufflePictures, generateNewGrid } from "./GameUtils"; //функции для генерации игрового поля и перемешивания картинок
 import './App.css';
 
+//максимальные значения difficulty для каждого gridSize
+const gridSizeMaxes = {
+  Pairs: {"4":8, "6":16, "8":16},
+  Triplets: {"3":3, "6":12, "9":16},
+};
+
 export default function App() {
-  
+
   const [showSettings, setShowSettings] = useState(false);
   const [grid, setGrid] = useState([]);
   const [gameStats, setGameStats] = useState({
     firstSelected: null,
     secondSelected: null, //можно открыть только 2 клетки за раз
+    thirdSelected: null,
     block: false, //блок игры
     gridSize: 4, //длина квадрата поля
     difficulty: 4, //сложность, влияет на количество уникальных элементов
-    gameMode: "Classic", //режим игры
+    gameType: "Pairs", //тип игры, пары или тройки
+    gameMode: "Classic", //режим игры, обычный или выживание
     theme: 'Fruits', //выбранная тема из Pictures
-    stepCounter: 0, //счетчик шагов, обновляется при открытии 2х клеток, выводится при победе
+    stepCounter: 0, //счетчик шагов, обновляется при открытии 2х-3х клеток, выводится при победе
     tileCounter: 0, //счетчик открытых клеток, если равен площади квадрата поля - победа
     survivalLifes: 8, //жизни для режима Survival
   });
 
-  //надо еще сделать счетчик побед
+  //надо еще сделать статистику
   const [score, setScore] = useState({
-    difficulties: {   "4": {
+    difficulties: {
+      "4": {
         Easy: 0,
         Medium: 0,
         Hard: 0,
@@ -39,18 +48,19 @@ export default function App() {
         Medium: 0,
         Hard: 0,
       },
-                  },
+    },
     totalClicks: 0,
     themeChanges: 0,
-    
-    
+
+
   })
-  
+
   //временные значения для окна настроек
   const [tempGameStats, setTempGameStats] = useState({
     gridSize: gameStats.gridSize,
     difficulty: gameStats.difficulty,
     gameMode: gameStats.gameMode,
+    gameType: gameStats.gameType,
   })
   //текст под игровой сеткой выводится
   const [displayText, setDisplayText] = useState(`Поле: 4х4, Сложность: 4.`);
@@ -59,7 +69,7 @@ export default function App() {
   //смена языка
   const [currentLanguage, setCurrentLanguage] = useState('russian');
   //размер одной клетки игрового поля
-  const [tileSize, setTileSize] = useState(40); 
+  const [tileSize, setTileSize] = useState(40);
 
   //для смены языка
   const toggleLanguage = (lang) => {
@@ -70,7 +80,7 @@ export default function App() {
   //загрузка из localStorage на старте
   useEffect(() => {
     const savedPictures = JSON.parse(localStorage.getItem('pics'));
-    if(savedPictures) {
+    if (savedPictures) {
       setPics(savedPictures)
     }
     else {
@@ -83,7 +93,7 @@ export default function App() {
     if (savedGrid) {
       setGrid(savedGrid);
     } else {
-      const newGrid = generateNewGrid(4, 4);
+      const newGrid = generateNewGrid(4, 4, "Pairs");
       setGrid(newGrid);
       localStorage.setItem('grid', JSON.stringify(newGrid));
     }
@@ -92,7 +102,7 @@ export default function App() {
     const savedGameStats = JSON.parse(localStorage.getItem('gameStats'));
     if (savedGameStats) {
       //блок снимаем на всякий случай
-      setGameStats((prevGameStats) => ({ ...savedGameStats, block: false }));  
+      setGameStats((prevGameStats) => ({ ...savedGameStats, block: false }));
     }
 
     //тоже загружаем, иначе после загрузки -> победе/поражении слетают настройки при перезапуске игры
@@ -101,53 +111,58 @@ export default function App() {
       setTempGameStats(savedTempGameStats);
     }
 
-    
-//загрузка языка
+
+    //загрузка языка
     const savedLanguage = localStorage.getItem('language');
-    if(savedLanguage) {
+    if (savedLanguage) {
       setCurrentLanguage(savedLanguage);
     }
 
     //загрузка текста с текущим размером поля и сложностью
     const savedText = localStorage.getItem('settingsText');
-    if(savedText) {
+    if (savedText) {
       setDisplayText(savedText);
     }
 
-  }, []); 
+  }, []);
 
   //перезагрузка игры с сохранением настроек
   const gameReset = () => {
     //берем настройки из временных значений
-    const newGridSize = tempGameStats.gridSize; 
-    const newDifficulty = tempGameStats.difficulty; 
+    const newGridSize = tempGameStats.gridSize;
+    const newDifficulty = tempGameStats.difficulty;
     const newGameMode = tempGameStats.gameMode;
+    const newGameType = tempGameStats.gameType;
 
     localStorage.setItem('tempGameStats', JSON.stringify(tempGameStats));
 
+    const multiplier = newGameType === "Pairs" ? 1 : 2;
+
     setGameStats(prevGameStats => {
       const newGameStats = {
-          ...prevGameStats,
-          firstSelected: null,
-          secondSelected: null,
-          block: false,
-          tileCounter: 0,
-          stepCounter: 0,
-          survivalLifes: parseInt(newGridSize*2, 10), //жизней пока что х2
-          gridSize: newGridSize, 
-          difficulty: newDifficulty, 
-          gameMode: newGameMode,
-        };
+        ...prevGameStats,
+        firstSelected: null,
+        secondSelected: null,
+        thirdSelected: null,
+        block: false,
+        tileCounter: 0,
+        stepCounter: 0,
+        survivalLifes: (parseInt(newGridSize, 10)+parseInt(newDifficulty, 10))*multiplier, //жизней пока что х2
+        gridSize: newGridSize,
+        difficulty: newDifficulty,
+        gameMode: newGameMode,
+        gameType: newGameType,
+      };
       localStorage.setItem('gameStats', JSON.stringify(newGameStats));
       return newGameStats;
     });
 
-    const newGrid = generateNewGrid(newGridSize, newDifficulty);
-    setGrid(newGrid); 
+    const newGrid = generateNewGrid(newGridSize, newDifficulty, newGameType);
+    setGrid(newGrid);
     localStorage.setItem('grid', JSON.stringify(newGrid));
 
-    //Выводит строку по типу Поле: 4x4, Сложность: 4, Режим: Обычный. - в соответствии с выбранным языком
-    const settingsText = `${languages[currentLanguage].fieldSizeMsg}: ${newGridSize}x${newGridSize}, ${languages[currentLanguage].difficultyMsg}: ${newDifficulty}, ${languages[currentLanguage].gameModeLabel}:  ${languages[currentLanguage].gameMode[newGameMode]}.`
+    //Выводит строку по типу Игра: Пары, Поле: 4x4, Сложность: 4, Режим: Обычный. - в соответствии с выбранным языком
+    const settingsText = `${languages[currentLanguage].gameTypeLabel}: ${languages[currentLanguage].gameTypes[newGameType]}, ${languages[currentLanguage].fieldSizeMsg}: ${newGridSize}x${newGridSize}, ${languages[currentLanguage].difficultyMsg}: ${newDifficulty}, ${languages[currentLanguage].gameModeLabel}:  ${languages[currentLanguage].gameMode[newGameMode]}.`
     setDisplayText(settingsText);
     localStorage.setItem('settingsText', settingsText);
 
@@ -182,6 +197,13 @@ export default function App() {
           localStorage.setItem('gameStats', JSON.stringify(newGameStats));
           return newGameStats;
         });
+      } else if (gameStats.thirdSelected === null) {
+        //выбрана третья ячейка
+        setGameStats(prevGameStats => {
+          const newGameStats = { ...prevGameStats, thirdSelected: { rowIndex, colIndex } };
+          localStorage.setItem('gameStats', JSON.stringify(newGameStats));
+          return newGameStats;
+        });
       }
       localStorage.setItem('gameStats', JSON.stringify(gameStats));
     }
@@ -195,13 +217,15 @@ export default function App() {
 
     // Определение минимальных размеров в зависимости от размера сетки
     const minTileSize = {
-      4: 74, 
+      3: 100,
+      4: 74,
       6: 50,
-      8: 40, 
+      8: 40,
+      9: 35,
     };
 
     // Рассчитываем новый размер клетки, который зависит от размера экрана и длины сетки
-     let newTileSize = Math.min((screenWidth / gridLength) * 0.3, (screenHeight / gridLength) * 0.5);
+    let newTileSize = Math.min((screenWidth / gridLength) * 0.3, (screenHeight / gridLength) * 0.5);
 
     // Устанавливаем минимальное значение на основе размера сетки
     newTileSize = Math.max(newTileSize, minTileSize[gridLength] || 40);
@@ -209,16 +233,17 @@ export default function App() {
     setTileSize(newTileSize);
   };
 
+  //логика для режима Pairs
   //срабатывает после нажатия на любую закрытую клетку
   useEffect(() => {
-    
-    const { firstSelected, secondSelected, block } = gameStats;
+
+    const { firstSelected, secondSelected, thirdSelected } = gameStats;
 
     //если открыты 2 клетки, начинаем сравнивать
-    if (firstSelected && secondSelected) {
+    if (firstSelected && secondSelected && gameStats.gameType==="Pairs") {
       const firstCell = grid[firstSelected.rowIndex][firstSelected.colIndex];
       const secondCell = grid[secondSelected.rowIndex][secondSelected.colIndex];
-
+      
       //если равны - получает 2 очка в счетчик, 1 жизнь в выживании и игра продолжается
       if (firstCell.value === secondCell.value) {
         // Совпадение
@@ -251,7 +276,7 @@ export default function App() {
           return updatedGameStats;
         });
         //если жизни кончились в сурвайвалрежиме, перезапуск игры через 3 сек
-        if(gameStats.survivalLifes === 0 && gameStats.gameMode === "Survival") {
+        if (gameStats.survivalLifes === 0 && gameStats.gameMode === "Survival") {
           setDisplayText(languages[currentLanguage].gameOverMsg);
           setTimeout(() => {
             gameReset();
@@ -259,29 +284,29 @@ export default function App() {
         }
         //иначе если игра продолжается -  блокирует игру на таймаут, потом закрывает 2 последние клетки обратно   
         else {
-        //выбирает случайное значение из объекта messages в соответствии с выбранным языком
-        const randomErrorMessage =
-          messages[currentLanguage].Error[Math.floor(Math.random() * messages[currentLanguage].Error.length)];
-        setDisplayText(randomErrorMessage);
+          //выбирает случайное значение из объекта messages в соответствии с выбранным языком
+          const randomErrorMessage =
+            messages[currentLanguage].Error[Math.floor(Math.random() * messages[currentLanguage].Error.length)];
+          setDisplayText(randomErrorMessage);
 
-        setTimeout(() => {
-          //прячет клетки
-          setGrid(prevGrid => {
-            const newGrid = [...prevGrid];
-            newGrid[firstSelected.rowIndex][firstSelected.colIndex].hidden = true;
-            newGrid[secondSelected.rowIndex][secondSelected.colIndex].hidden = true;
-            localStorage.setItem('grid', JSON.stringify(newGrid));
-            return newGrid;
-          });
+          setTimeout(() => {
+            //прячет клетки
+            setGrid(prevGrid => {
+              const newGrid = [...prevGrid];
+              newGrid[firstSelected.rowIndex][firstSelected.colIndex].hidden = true;
+              newGrid[secondSelected.rowIndex][secondSelected.colIndex].hidden = true;
+              localStorage.setItem('grid', JSON.stringify(newGrid));
+              return newGrid;
+            });
 
-          // сброс клеток в любом случае
-          setGameStats(prevGameStats => {
-            const newGameStats = { ...prevGameStats, block: false };
-            localStorage.setItem('gameStats', JSON.stringify(newGameStats));
-            return newGameStats;
-          });
-        }, 1000);
-      }
+            // сброс клеток в любом случае
+            setGameStats(prevGameStats => {
+              const newGameStats = { ...prevGameStats, block: false };
+              localStorage.setItem('gameStats', JSON.stringify(newGameStats));
+              return newGameStats;
+            });
+          }, 1000);
+        }
       }
       // сброс клеток в любом случае
       setGameStats(prevGameStats => {
@@ -300,9 +325,95 @@ export default function App() {
       window.removeEventListener('resize', updateTileSize);
     };
 
-    
+
   }, [grid]);
 
+  
+  // та же логика для режима Триплет, нужно переработать!
+  useEffect(() => {
+
+      const { firstSelected, secondSelected, thirdSelected } = gameStats;
+
+      // Если открыты 3 клетки, начинаем сравнивать
+      if (thirdSelected && gameStats.gameType==="Triplets") {
+        const firstCell = grid[firstSelected.rowIndex][firstSelected.colIndex];
+        const secondCell = grid[secondSelected.rowIndex][secondSelected.colIndex];
+        const thirdCell = grid[thirdSelected.rowIndex][thirdSelected.colIndex];
+
+        // Если все три клетки равны - получаем 3 очка в счетчик, 1 жизнь в выживании и игра продолжается
+        if (firstCell.value === secondCell.value && secondCell.value === thirdCell.value) {
+          // Совпадение
+          setGameStats(prevGameStats => {
+            const updatedGameStats = {
+              ...prevGameStats,
+              tileCounter: prevGameStats.tileCounter + 3,
+              survivalLifes: prevGameStats.survivalLifes + 1,
+              stepCounter: prevGameStats.stepCounter + 1
+            };
+            localStorage.setItem('gameStats', JSON.stringify(updatedGameStats));
+            return updatedGameStats;
+          });
+          // Выбираем случайное значение из объекта messages в соответствии с выбранным языком
+          const randomSuccessMessage =
+            messages[currentLanguage].Success[Math.floor(Math.random() * messages[currentLanguage].Success.length)];
+          setDisplayText(randomSuccessMessage);
+
+          // Три открытые клетки не равны
+        } else {
+          // Блок игры
+          setGameStats(prevGameStats => {
+            const updatedGameStats = {
+              ...prevGameStats,
+              block: true,
+              survivalLifes: prevGameStats.survivalLifes - 1,
+              stepCounter: prevGameStats.stepCounter + 1
+            };
+            localStorage.setItem('gameStats', JSON.stringify(updatedGameStats));
+            return updatedGameStats;
+          });
+          // Если жизни кончились в режиме "Survival", перезапускаем игру через 3 секунды
+          if (gameStats.survivalLifes === 0 && gameStats.gameMode === "Survival") {
+            setDisplayText(languages[currentLanguage].gameOverMsg);
+            setTimeout(() => {
+              gameReset();
+            }, 3000);
+          }
+          // Иначе если игра продолжается - блокируем игру на таймаут, потом закрываем 3 последние клетки обратно
+          else {
+            // Выбираем случайное значение из объекта messages в соответствии с выбранным языком
+            const randomErrorMessage =
+              messages[currentLanguage].Error[Math.floor(Math.random() * messages[currentLanguage].Error.length)];
+            setDisplayText(randomErrorMessage);
+
+            setTimeout(() => {
+              // Прячем клетки
+              setGrid(prevGrid => {
+                const newGrid = [...prevGrid];
+                newGrid[firstSelected.rowIndex][firstSelected.colIndex].hidden = true;
+                newGrid[secondSelected.rowIndex][secondSelected.colIndex].hidden = true;
+                newGrid[thirdSelected.rowIndex][thirdSelected.colIndex].hidden = true;
+                localStorage.setItem('grid', JSON.stringify(newGrid));
+                return newGrid;
+              });
+
+              // Сбрасываем клетки в любом случае
+              setGameStats(prevGameStats => {
+                const newGameStats = { ...prevGameStats, block: false };
+                localStorage.setItem('gameStats', JSON.stringify(newGameStats));
+                return newGameStats;
+              });
+            }, 1000);
+          }
+        }
+        // Сбрасываем клетки в любом случае
+        setGameStats(prevGameStats => {
+          const newGameStats = { ...prevGameStats, firstSelected: null, secondSelected: null, thirdSelected: null };
+          localStorage.setItem('gameStats', JSON.stringify(newGameStats));
+          return newGameStats;
+        });
+      }
+  }, [grid]);
+  
   //срабатывает в случае, если счетчик равен площади игрового поля
   useEffect(() => {
     if (gameStats.tileCounter === gameStats.gridSize * gameStats.gridSize) {
@@ -321,7 +432,7 @@ export default function App() {
     const currentThemeIndex = themes.indexOf(gameStats.theme);
     const nextThemeIndex = (currentThemeIndex + 1) % themes.length; // переход к следующей теме
     const nextTheme = themes[nextThemeIndex];
-    
+
     //выводит строку по типу Тема: Фрукты
     setDisplayText(`${languages[currentLanguage].currentThemeMsg}${languages[currentLanguage].pictures[nextTheme] || nextTheme}`);
 
@@ -330,7 +441,6 @@ export default function App() {
       localStorage.setItem('gameStats', JSON.stringify(newGameStats));
       return newGameStats;
     });
-
   };
 
   //для селекторов настроек (размер поля, сложность, режим игры)
@@ -338,10 +448,36 @@ export default function App() {
   const handleSelectChange = (field, value) => {
     setTempGameStats((prevStats) => ({
       ...prevStats,
-      [field]: value,      
+      [field]: value,
     }));
-
   };
+
+  //при переключении типа игры устанавливает размер поля как минимальный
+  useEffect(() => {
+    const minGridSize = tempGameStats.gameType === "Pairs" ? 4 : 3;
+    if (tempGameStats.gridSize !== minGridSize) {
+      setTempGameStats((prevStats) => ({
+        ...prevStats,
+        gridSize: minGridSize,
+      }));
+    }
+  }, [tempGameStats.gameType]);
+  
+  //при переключении размера поля обновляет максимальную сложность
+  useEffect(() => {
+
+    const gridSize = tempGameStats.gridSize;
+    const gameType = tempGameStats.gameType;
+    const maxDifficulty = gridSizeMaxes[gameType][gridSize] || 16;
+
+    setTempGameStats((prevStats) => ({
+      ...prevStats,
+      difficulty:
+        prevStats.difficulty > maxDifficulty
+          ? maxDifficulty
+          : prevStats.difficulty,
+    }));
+  }, [tempGameStats.gridSize]);
 
   return (
     <div>
@@ -359,7 +495,7 @@ export default function App() {
           setGameStats(prevGameStats => ({ ...prevGameStats, block: !prevGameStats.block }));
         }}>
           {languages[currentLanguage].settings}
-        </button>        
+        </button>
       </div>
 
       {/** окно настроек */}
@@ -375,7 +511,7 @@ export default function App() {
             </span>
             <h2>{languages[currentLanguage].settings}</h2>
           </div>
-          
+
           {/** выбор языка */}
           <label>{languages[currentLanguage].language}:</label>
           <select
@@ -388,26 +524,49 @@ export default function App() {
               </option>
             ))}
           </select>
-          
+
+          {/** выбор игры - пары или тройки */}
+          <label>{languages[currentLanguage].gameTypeLabel}</label>
+          <div class="gameType-container">
+            {["Pairs", "Triplets"].map((option) => (
+              <div key={option}>
+                <input
+                  type="radio"
+                  id={option}
+                  name="gameType"
+                  value={option}
+                  checked={tempGameStats.gameType === option}
+                  onChange={() => handleSelectChange('gameType', option)}
+                />
+                 <span>{languages[currentLanguage].gameTypes[option]}</span>
+              </div>
+            ))}
+          </div>
+
+
           {/** размер поля */}
           <label>{languages[currentLanguage].fieldSize}:</label>
-          <select 
-            value={tempGameStats.gridSize} 
-            onChange={(event) => {handleSelectChange('gridSize', event.target.value)}}
+          <select
+            value={tempGameStats.gridSize}
+            onChange={(event) => { handleSelectChange('gridSize', event.target.value) }}
           >
-            {[4, 6, 8].map((size, index) => (
-              <option key={index} value={size}>
-                {size}х{size}
-              </option>
-            ))}
+            {([3, 4, 6, 8, 9]
+              .filter((size) =>
+                tempGameStats.gameType === "Pairs" ? size % 2 === 0 : size % 3 === 0
+              )
+              .map((size, index) => (
+                <option key={index} value={size}>
+                  {size}х{size}
+                </option>
+              )))}
           </select>
-      
+
           {/** выбор сложности */}
           <label>{languages[currentLanguage].difficultyLabel}:</label>
           <input
             type="range"
             min="2"
-            max={tempGameStats.gridSize === "4" ? 8 : 16}
+            max={gridSizeMaxes[tempGameStats.gameType][tempGameStats.gridSize] || 16}
             step="1"
             value={tempGameStats.difficulty}
             onChange={(event) => handleSelectChange('difficulty', event.target.value)}
@@ -419,13 +578,13 @@ export default function App() {
           <select
             value={tempGameStats.gameMode}
             onChange={(event) => handleSelectChange('gameMode', event.target.value)}
-            >
+          >
             {["Classic", "Survival"].map((gameMode, index) => (
               <option key={index} value={gameMode}>
                 {languages[currentLanguage].gameMode[gameMode]}
               </option>
-              ))}
-            </select>
+            ))}
+          </select>
 
           {/** кнопка Reset */}
           <button onClick={() => {
@@ -434,6 +593,7 @@ export default function App() {
               gridSize: tempGameStats.gridSize,
               difficulty: tempGameStats.difficulty,
               gameMode: tempGameStats.gameMode,
+              gameType: tempGameStats.gameType,
             });
             gameReset();
           }}>
@@ -454,7 +614,7 @@ export default function App() {
                 key={colIndex}
                 onClick={() => !gameStats.block && onClickTile(rowIndex, colIndex)}
               >
-                <div className="tile-picture" style={{opacity: cell.hidden ? 0 : 1}}>
+                <div className="tile-picture" style={{ opacity: cell.hidden ? 0 : 1 }}>
                   {cell.hidden ? null : pics[gameStats.theme][cell.value - 1]}
                 </div>
               </div>
@@ -466,7 +626,7 @@ export default function App() {
 
       {/** счетчик жизней, выводится только в режиме Survival */}
       <div className="survival-mode-counter">
-        {gameStats.gameMode === "Survival" && `${languages[currentLanguage].survivalMsg}: ${gameStats.survivalLifes+1}`}
+        {gameStats.gameMode === "Survival" && `${languages[currentLanguage].survivalMsg}: ${gameStats.survivalLifes + 1}`}
       </div>
 
       {/** здесь всякий текст, режимы игры, сообщения о прогрессе/завершении */}

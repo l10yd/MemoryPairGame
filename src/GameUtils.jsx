@@ -31,23 +31,20 @@ const shufflePictures = (pictures) => {
 
 
 //генерирует новую сетку клеток на основе длины строки и сложности из gameStats
-const generateNewGrid = (arraySize, difficulty) => {
+const generateNewGrid = (arraySize, difficulty, gameType) => {
 
   //заполняем одномерный массив числами от 1 до difficulty (кол-во уникальных элементов)
   const values = Array.from({ length: difficulty }, (_, index) => index + 1); 
 
-  //наполняем еще один массив парами элементов из values, пока его длина не будет равна площади игрового поля (1,1,2,2 и тд)
-  const pairedValues = Array.from({ length: (arraySize * arraySize) / 2 }, (_, i) => [values[i % difficulty], values[i % difficulty]]).flat();
-
-  //или можно так
-  /*const pairedValues = [];
-  for (let i = 0; i < (arraySize * arraySize)/2; i++) {
-    pairedValues.push(values[i % edge]);
-    pairedValues.push(values[i % edge]);
-  }*/
+  //наполняем еще один массив парами или тройками элементов из values, пока его длина не будет равна площади игрового поля (1,1,2,2 и тд)
+  const length = gameType === "Pairs" ? (arraySize * arraySize) / 2 : (arraySize * arraySize) / 3;
+  const filledValues = Array.from({ length }, (_, i) => {
+    const duplicatedValues = Array.from({ length: gameType === "Pairs" ? 2 : 3 }, () => values[i % difficulty]);
+    return duplicatedValues;
+  }).flat();
   
   //перемешиваем одномерный массив 
-  const shuffled = shuffleArray(pairedValues);
+  const shuffled = shuffleArray(filledValues);
 
   //нарезаем перемешанный одномерный массив равномерными частями и наполняем двумерный массив
   const shuffledMatrix = [];

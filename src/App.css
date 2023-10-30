@@ -1,5 +1,5 @@
 /* app.css 
-добавить: картинки вместо цифр(v), заменить сложности, звуки, темную тему, изменить оформление
+добавить: картинки вместо цифр(v), заменить сложности(v), звуки, темную тему, изменить оформление, !переработать useEffect для проверки совпадений открытых клеток
 */
 body {
   margin: 0;
@@ -51,6 +51,8 @@ body {
 .display-text, .survival-mode-counter {
   margin-top: 5px;
   text-align: center;
+  /*font-size: 1vw;
+  min-font-size: 14px;*/
   z-index: 1;
 }
 
@@ -65,6 +67,13 @@ body {
   max-width: 150px;
   font-size: 14px;
 }
+
+.gameType-container {
+  display: flex; /* Устанавливаем контейнеру flex-контейнером */
+  align-items: center; /* Выравниваем элементы по вертикали по центру */
+  margin-bottom: 5px;
+}
+
 
 .settings-dialog {
   position: absolute;
