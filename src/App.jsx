@@ -11,11 +11,26 @@ const gridSizeMaxes = {
   Triplets: {"3":3, "6":12, "9":16},
 };
 
+//тут звуки
+const sounds = {
+  firstClick: "https://www.myinstants.com/media/sounds/click-sound.mp3",
+  success: "https://codeskulptor-demos.commondatastorage.googleapis.com/descent/gotitem.mp3",
+  error: "",
+  victory: "",
+  defeat: "",
+  reset: "",
+  toggleTheme: "",
+  settingsOpen: "",
+  settingsClose: "",
+};
+
 export default function App() {
 
   const [showSettings, setShowSettings] = useState(false);
   const [grid, setGrid] = useState([]);
   const [gameStats, setGameStats] = useState({
+    soundOn: false,
+    darkmode: false,
     firstSelected: null,
     secondSelected: null, //можно открыть только 2 клетки за раз
     thirdSelected: null,
@@ -64,7 +79,7 @@ export default function App() {
     gameType: gameStats.gameType,
   })
   //текст под игровой сеткой выводится
-  const [displayText, setDisplayText] = useState(`Поле: 4х4, Сложность: 4.`);
+  const [displayText, setDisplayText] = useState(`Поле: 4х4, Сложность: 3.`);
   //картинки хранятся в отдельном объекте, но будут перемешиватсья при ресете
   const [pics, setPics] = useState([]);
   //смена языка
@@ -76,6 +91,14 @@ export default function App() {
   const toggleLanguage = (lang) => {
     setCurrentLanguage(lang);
     localStorage.setItem('language', lang);
+  };
+
+  //для проигрывания звуков
+  const playSound = (audioSrc) => {
+    if(gameStats.soundOn) {
+      const audioElement = new Audio(audioSrc);
+      audioElement.play();
+    }
   };
 
   //загрузка из localStorage на старте
@@ -95,7 +118,7 @@ export default function App() {
     if (savedGrid) {
       setGrid(savedGrid);
     } else {
-      const newGrid = generateNewGrid(4, 4, "Pairs");
+      const newGrid = generateNewGrid(4, 3, "Pairs");
       setGrid(newGrid);
       localStorage.setItem('grid', JSON.stringify(newGrid));
     }
@@ -176,40 +199,36 @@ export default function App() {
     //окно настроек закрываем
     setShowSettings(false);
   }
+  
+  // функция для обновления выбранной клетки в gameStats и сохранения в localStorage
+  //вызывается при нажатии на клетку
+  const updateSelectedCell = (cellName, rowIndex, colIndex) => {
+    setGameStats((prevGameStats) => {
+      const newGameStats = { ...prevGameStats, [cellName]: { rowIndex, colIndex } };
+      localStorage.setItem('gameStats', JSON.stringify(newGameStats));
+      return newGameStats;
+    });
+  };
 
-  //обработка нажатия на клетку
+  // Обработка нажатия на клетку
   const onClickTile = (rowIndex, colIndex) => {
-    //если клетка еще закрыта и нету блока
+    //только если нет блока и клетка скрыта
     if (!gameStats.block && grid[rowIndex][colIndex].hidden) {
       const updatedGrid = [...grid];
       updatedGrid[rowIndex][colIndex] = { ...updatedGrid[rowIndex][colIndex], hidden: false };
       setGrid(updatedGrid);
       localStorage.setItem('grid', JSON.stringify(updatedGrid));
 
+      playSound(sounds.success);
+
       if (gameStats.firstSelected === null) {
-        //выбрана первая ячейка
-        setGameStats(prevGameStats => {
-          const newGameStats = { ...prevGameStats, firstSelected: { rowIndex, colIndex } };
-          localStorage.setItem('gameStats', JSON.stringify(newGameStats));
-          return newGameStats;
-        });
+        updateSelectedCell('firstSelected', rowIndex, colIndex);        
       } else if (gameStats.secondSelected === null) {
-        //выбрана вторая ячейка
-        setGameStats(prevGameStats => {
-          const newGameStats = { ...prevGameStats, secondSelected: { rowIndex, colIndex } };
-          localStorage.setItem('gameStats', JSON.stringify(newGameStats));
-          return newGameStats;
-        });
+        updateSelectedCell('secondSelected', rowIndex, colIndex);
       } else if (gameStats.thirdSelected === null) {
-        //выбрана третья ячейка
-        setGameStats(prevGameStats => {
-          const newGameStats = { ...prevGameStats, thirdSelected: { rowIndex, colIndex } };
-          localStorage.setItem('gameStats', JSON.stringify(newGameStats));
-          return newGameStats;
-        });
+        updateSelectedCell('thirdSelected', rowIndex, colIndex);
       }
-      localStorage.setItem('gameStats', JSON.stringify(gameStats));
-    }
+    }    
   };
 
   // функция для обновления размера клеток, вызывается в useEffect при изменении grid или размеров окна
@@ -403,6 +422,17 @@ export default function App() {
     });
   };
 
+  //смена - ночной/дневной режим
+  const toggleDarkMode = () => {
+    setGameStats(prevGameStats => {
+      const newGameStats = { ...prevGameStats, darkmode: !prevGameStats.darkmode };
+      localStorage.setItem('gameStats', JSON.stringify(newGameStats));
+      document.body.style.backgroundColor = newGameStats.darkmode ? "black" : "white";
+      document.body.style.color = newGameStats.darkmode ? "#777" : "black"; 
+      return newGameStats;
+    });
+  }
+
   //для селекторов настроек (размер поля, сложность, режим игры)
   //запоминает временные настройки
   const handleSelectChange = (field, value) => {
@@ -444,7 +474,25 @@ export default function App() {
 
       {/** кнопки */}
       <div className="button-container">
-        {/** кнопка смены темы */}
+
+        {/** кнопка выключения/включения звука */}
+        {gameStats.soundOn ? (
+      <svg onClick={()=> setGameStats((prevStats) => ({
+        ...prevStats,
+        soundOn: !prevStats.soundOn,
+      }))} className="sound-button" enable-background="new 0 0 91 91" height="40px" id="Layer_1" version="1.1" viewBox="0 0 91 91" width="40px" xmlSpace="preserve" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink"><g stroke={gameStats.darkmode ? "#555" : "black"} strokeWidth="4"><path d="M4.025,33.079c0.282-0.031,0.243,7.27,0.074,10.954c-0.25,5.51-1.105,11.436-0.654,16.933   c0.404,4.934,4.519,5.317,8.58,5.362c2.753,0.031,10.481,0.035,11.479-0.234c8.647,6.077,18.8,9.523,27.329,15.801   c2.006,1.476,4.895-0.519,4.85-2.784c-0.441-22.71-1.446-45.437-0.958-68.155c0.041-1.918-2.223-3.238-3.865-2.216   c-8.727,5.424-17.556,10.639-25.764,16.808c-0.76-0.95-1.926-1.563-3.757-1.593c-5.691-0.098-11.62,0.913-17.313,1.256   C-1.074,25.518-0.935,33.64,4.025,33.079z M49.333,15.457c-0.932,19.176,0.059,38.327-0.031,57.51   c-7.274-4.67-15.243-8.229-22.019-13.654c-0.121-0.096-0.243-0.184-0.366-0.266c0.045-3.025,0.065-6.049,0.055-9.074   c-0.019-5.659-0.149-11.319-0.372-16.974c-0.055-1.442-0.073-2.983-0.302-4.378C33.736,23.851,41.586,19.714,49.333,15.457z    M19.577,31.293c0.284,2.656,0.053,5.583,0.137,8.069c0.117,3.536-0.09,18.555,0.202,20.102c-1.503-0.292-10.204,0.104-10.3,0.096   c-0.045-0.758-1.115-21.999-1.624-26.953C9.77,32.396,18.784,31.367,19.577,31.293z"/><path d="M65.214,69.996c-5.53,2.229-2.352,10.071,3.207,7.607c14.949-6.627,24.813-21.748,21.776-38.201   c-1.354-7.34-5.366-14.036-11.28-18.594c-2.408-1.857-5.031-3.371-7.808-4.606c-1.824-0.811-4.249-2.166-6.26-1.401   c-0.77,0.294-1.108,1.044-0.733,1.802c0.776,1.557,2.595,2.188,4.054,2.975c2.108,1.136,4.148,2.422,5.995,3.953   c4.891,4.047,8.314,9.35,9.454,15.642C86.061,52.645,77.475,65.057,65.214,69.996z"/></g></svg>    
+        ) : (
+      <svg onClick={()=> setGameStats((prevStats) => ({
+          ...prevStats,
+          soundOn: !prevStats.soundOn,
+        }))} className="sound-button" enable-background="new 0 0 91 91" height="40" id="Layer_1" version="1.1" viewBox="0 0 91 91" width="40" xmlSpace="preserve" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink"><g stroke={gameStats.darkmode ? "#555" : "black"} strokeWidth="4"><path d="M11.459,65.569c2.541,0.028,9.67,0.032,10.591-0.217c7.978,5.607,17.348,8.788,25.219,14.58   c1.852,1.361,4.515-0.479,4.475-2.569c-0.408-20.955-1.334-41.926-0.884-62.889c0.036-1.77-2.051-2.988-3.566-2.045   c-8.054,5.004-16.203,9.817-23.777,15.509c-0.701-0.875-1.776-1.442-3.465-1.47c-5.251-0.09-10.722,0.843-15.975,1.159   c-4.705,0.285-4.577,7.779,0,7.261c0.258-0.028,0.519-0.063,0.777-0.092c-0.36,3.389-0.554,6.801-0.709,10.199   c-0.23,5.084-1.02,10.553-0.603,15.625C3.915,65.174,7.711,65.528,11.459,65.569z M45.886,18.629   c-0.862,17.694,0.055,35.367-0.028,53.068C39.144,67.387,25.313,58.927,25.2,58.852c0.042-2.792,0.059-5.582,0.051-8.373   c-0.017-5.222-0.138-10.445-0.343-15.663c-0.051-1.331-0.068-2.752-0.279-4.04C31.492,26.375,38.736,22.558,45.886,18.629z    M18.43,33.242c0.258,2.45,0.047,5.151,0.123,7.445c0.109,3.263-0.081,17.122,0.187,18.549c-1.386-0.27-9.414,0.096-9.504,0.088   c-0.04-0.699-1.027-20.299-1.497-24.871C9.376,34.259,17.696,33.31,18.43,33.242z"/><path d="M89.568,30.554c0.666-1.103-0.665-2.438-1.768-1.768c-5.641,3.412-10.476,8.761-15.282,13.368   c-4.809-4.609-9.644-9.957-15.283-13.368c-1.104-0.667-2.434,0.665-1.768,1.768c3.378,5.591,8.778,10.318,13.49,14.946   c-4.604,4.313-9.176,8.655-13.619,13.141c-2.458,2.48,1.354,6.294,3.832,3.832c4.476-4.441,8.909-8.922,13.348-13.4   c4.438,4.479,8.871,8.959,13.346,13.4c2.479,2.462,6.29-1.35,3.834-3.832c-4.446-4.486-9.016-8.828-13.62-13.141   C80.792,40.872,86.19,36.145,89.568,30.554z"/></g></svg>
+      )}
+
+        {/** кнопка темной/светлой темы */}
+   
+      <svg onClick={toggleDarkMode} className="darkmode-button" fill="none" height="40" viewBox="0 0 116 160" width="40" xmlns="http://www.w3.org/2000/svg"><g stroke={gameStats.darkmode ? "#555" : "black"} strokeWidth="4" clip-path="url(#clip0)"><path d="M100.403 93.9723C108.026 84.5791 112.923 73.2919 114.57 61.329C117.808 37.543 108.046 18.7158 87.0831 8.31582C80.6111 5.10476 73.5628 3.37841 66.8993 1.88638C49.8317 -1.93541 34.2043 1.0261 20.448 10.6853C9.25384 18.5468 3.10338 28.1492 1.64562 40.0425C0.546596 49.1026 1.14208 58.2869 3.40198 67.1313C7.96277 85.1859 16.123 99.3758 28.3483 110.51C28.6528 110.788 28.9613 111.064 29.2704 111.34C30.6314 112.484 31.8855 113.749 33.0175 115.118C34.0539 116.46 35.2477 118.193 35.2764 119.685C35.3816 125.287 35.0538 130.807 34.6839 135.935C34.4546 139.109 34.0874 142.334 33.7319 145.453C33.5143 147.359 33.2973 149.265 33.1085 151.177C32.6877 155.421 34.1417 157.544 38.1268 158.505C40.4909 159.09 42.9164 159.393 45.3523 159.409H45.5762C53.6471 159.341 61.8461 159.157 69.7802 158.978L75.0728 158.861C80.2099 158.749 82.2799 156.887 82.7105 151.99C83.4645 143.414 83.8265 136.828 83.882 130.636L83.8899 129.974C83.9343 126.301 83.984 122.157 80.7679 118.614L86.7525 111.103C91.3146 105.375 95.8649 99.6653 100.403 93.9723ZM75.1669 117.569L66.2054 116.895C66.193 116.822 66.191 116.749 66.1988 116.676C67.5194 111.62 68.8536 106.569 70.201 101.522C73.1982 90.2311 76.2966 78.5563 79.1102 67.0129C81.2815 58.1071 81.3507 50.2149 79.3199 42.8867C78.3209 39.2809 76.4234 36.6176 73.8313 35.1848C72.5826 34.5334 71.2151 34.1405 69.8102 34.03C68.4054 33.9196 66.9921 34.0937 65.6568 34.542C64.5923 34.8947 63.5669 35.3552 62.5968 35.9159L62.1983 36.1277C61.571 36.46 60.9889 36.8433 60.3727 37.2446L60.0335 37.4657C59.8643 37.2536 59.6989 37.0421 59.5342 36.832C58.9319 36.0345 58.2889 35.2682 57.6075 34.5363C53.9856 30.7698 48.774 30.403 44.636 33.6258C41.8354 35.8836 39.7128 38.8648 38.5004 42.243C34.2336 53.1406 33.9168 64.5031 37.5589 76.0139C39.4649 82.038 41.4839 88.1349 43.4395 94.0302C44.1766 96.2545 44.9119 98.4796 45.6455 100.705C47.2413 105.698 48.1749 110.876 48.4225 116.11H41.5865C41.2056 111.198 37.9273 107.868 34.7576 104.642C34.1696 104.046 33.5816 103.448 33.0112 102.839C19.9208 88.8971 12.7372 73.9651 11.0514 57.19C10.4706 51.4131 10.0406 45.262 10.8201 39.4213C11.9963 30.6083 17.0477 23.2264 26.2621 16.8524C37.485 9.08915 49.9659 6.58183 63.351 9.40004C70.4081 10.8849 77.2643 12.4843 83.5723 15.6992C99.903 24.0244 107.371 38.5122 105.166 57.5971C103.646 70.7567 97.5605 82.3599 85.4326 95.221C82.2485 98.5999 78.692 102.745 76.4587 107.873C75.2989 110.536 74.1698 113.679 75.1669 117.569ZM75.5746 133.886L75.2009 139.631H41.4095V132.867L75.5746 133.886ZM74.5285 146.977L74.3331 151.391C64.2234 151.838 52.5683 152.215 41.0617 151.341C41.0389 151.184 41.0155 151.036 40.9966 150.896C40.9136 150.484 40.8711 150.065 40.8703 149.645C40.9154 148.666 41.0109 147.682 41.1109 146.64C41.1344 146.4 41.1576 146.156 41.1807 145.909L74.5285 146.977ZM40.8227 121.832L41.7866 121.86C53.4133 122.2 64.4049 122.521 75.6445 123.687L75.8079 126.452C64.2955 127.086 52.7562 127.059 41.2474 126.368L40.8227 121.832ZM49.5229 92.2123C49.0994 90.8731 48.6734 89.5339 48.2703 88.1908C46.0748 80.9134 43.9636 73.7739 42.2674 66.4386C40.6907 59.625 41.6141 52.4138 45.1634 43.7446C45.9469 42.0089 47.0673 40.4448 48.4604 39.1418C48.7186 38.8346 49.039 38.5847 49.4007 38.4089C49.7623 38.233 50.1569 38.135 50.5591 38.1212C51.321 38.1563 52.1108 38.6553 52.906 39.6036C54.9571 42.0498 55.0012 42.6681 53.3291 45.6151C49.9274 51.6119 48.5419 57.3726 49.094 63.2256C49.2234 65.0669 49.6552 66.8737 50.3722 68.5759C50.6604 69.4331 51.1794 70.1954 51.8726 70.7794C52.5658 71.3635 53.4068 71.7472 54.3038 71.889C55.2007 72.0308 56.1195 71.9248 56.9602 71.5827C57.8008 71.2406 58.531 70.6754 59.0716 69.9489C60.2834 68.5407 61.2333 66.9284 61.8767 65.1885C64.3123 59.0183 64.7819 52.2516 63.2214 45.8066C62.7294 43.6954 64.2292 41.9221 67.3384 40.9406C68.6008 40.5419 69.5926 40.5414 70.2846 40.9362C70.6433 41.1861 70.9459 41.5077 71.1726 41.8804C71.4 42.253 71.5463 42.6687 71.6025 43.1008C72.3866 46.5382 73.3569 50.816 72.8675 54.6586C72.0181 61.3038 70.5721 68.0015 69.1719 74.4783C68.9105 75.6965 68.6498 76.9141 68.3884 78.131C67.5494 82.0692 66.6327 86.0627 65.7458 89.9241C64.5559 95.1105 63.3281 100.474 62.263 105.782C61.813 108.387 61.562 111.02 61.5123 113.662C61.464 114.722 61.4148 115.808 61.3417 116.922L53.3766 116.434C54.4606 107.823 51.9528 99.8897 49.5247 92.2123H49.5229ZM56.2732 58.6877L56.7346 55.8619C56.7328 56.8222 56.5777 57.7759 56.2752 58.6877H56.2732Z" fill="black"/></g><defs><clipPath id="clip0"><rect fill="white" height="160" transform="translate(0.777344)" width="115"/></clipPath></defs></svg>
+               
+        {/** кнопка смены темы (картинки) */}
         <button id="theme-button" onClick={() => {
           if (!gameStats.gameOver) {
             changeTheme();
@@ -464,7 +512,7 @@ export default function App() {
 
       {/** окно настроек */}
       {showSettings && (
-        <div className="settings-dialog">
+        <div className="settings-dialog" style={{color: gameStats.darkmode ? "#555" : "black", backgroundColor: gameStats.darkmode ? "black" : "white"}}>
           <div className="settings-header">
             {/** нажатие на крестик закрывает окно и разблокирует игру */}
             <span className="close-button" onClick={() => {
@@ -571,19 +619,17 @@ export default function App() {
       <div id="grid-container" style={{}}>
 
         {/** кнопка перезагрузки, если игра закончена */}
-        {gameStats.gameOver && !showSettings && (
-        <div onClick={gameReset} id="gameOver-button"
-          style={{ width: tileSize*1.5 + 'px', height: tileSize*1.5 + 'px', fontSize: tileSize > 0 ? tileSize * 1.5 : 0, opacity: gameStats.gameOver ? 1 : 0,}}>
-          &#8635;
-        </div>
-        )}
+        <div className={`overlay animated ${gameStats.gameOver && !showSettings ? "show" : ""}`}>        
+      <svg className="gameOver-button" onClick={gameReset} height="32px" version="1.1" viewBox="0 0 32 32" width="32px" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink"><path d="M28,16c-1.219,0-1.797,0.859-2,1.766C25.269,21.03,22.167,26,16,26c-5.523,0-10-4.478-10-10S10.477,6,16,6  c2.24,0,4.295,0.753,5.96,2H20c-1.104,0-2,0.896-2,2s0.896,2,2,2h6c1.104,0,2-0.896,2-2V4c0-1.104-0.896-2-2-2s-2,0.896-2,2v0.518  C21.733,2.932,18.977,2,16,2C8.268,2,2,8.268,2,16s6.268,14,14,14c9.979,0,14-9.5,14-11.875C30,16.672,28.938,16,28,16z"/></svg>
+              </div>
 
+        {/** маппятся все клетки */}
         {grid.map((rowArr, rowIndex) => (
           <div key={rowIndex} style={{ display: "flex" }}>
             {rowArr.map((cell, colIndex) => (
               <div
                 className={`tile`}
-                style={{ width: tileSize + 'px', height: tileSize + 'px', fontSize: tileSize > 0 ? tileSize / 2 : 0, }}
+                style={{ width: tileSize + 'px', height: tileSize + 'px', fontSize: tileSize > 0 ? tileSize / 2 : 0, borderColor: gameStats.darkmode ? "#555" : "#ccc" }}
                 key={colIndex}
                 onClick={() => !gameStats.block && onClickTile(rowIndex, colIndex)}
               >
