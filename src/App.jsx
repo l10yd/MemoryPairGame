@@ -20,6 +20,7 @@ export default function App() {
     secondSelected: null, //можно открыть только 2 клетки за раз
     thirdSelected: null,
     block: false, //блок игры
+    gameOver: false, //если true, то показывается иконка перезапуска
     gridSize: 4, //длина квадрата поля
     difficulty: 4, //сложность, влияет на количество уникальных элементов
     gameType: "Pairs", //тип игры, пары или тройки
@@ -79,6 +80,7 @@ export default function App() {
 
   //загрузка из localStorage на старте
   useEffect(() => {
+    localStorage.clear();
     const savedPictures = JSON.parse(localStorage.getItem('pics'));
     if (savedPictures) {
       setPics(savedPictures)
@@ -144,6 +146,7 @@ export default function App() {
         firstSelected: null,
         secondSelected: null,
         thirdSelected: null,
+        gameOver: false,
         block: false,
         tileCounter: 0,
         stepCounter: 0,
@@ -233,91 +236,42 @@ export default function App() {
     setTileSize(newTileSize);
   };
 
-  //логика для режима Pairs
-  //срабатывает после нажатия на любую закрытую клетку
+  //логика проверки совпадений открытых клеток
+  //срабатывает после открытия 2 или 3 клеток (в зависимости от режима)
   useEffect(() => {
-
     const { firstSelected, secondSelected, thirdSelected } = gameStats;
 
-    //если открыты 2 клетки, начинаем сравнивать
-    if (firstSelected && secondSelected && gameStats.gameType==="Pairs") {
+    if (secondSelected && gameStats.gameType === "Pairs") {
+      // логика для режима Pairs
       const firstCell = grid[firstSelected.rowIndex][firstSelected.colIndex];
       const secondCell = grid[secondSelected.rowIndex][secondSelected.colIndex];
-      
-      //если равны - получает 2 очка в счетчик, 1 жизнь в выживании и игра продолжается
+
       if (firstCell.value === secondCell.value) {
-        // Совпадение
-        setGameStats(prevGameStats => {
-          const updatedGameStats = {
-            ...prevGameStats,
-            tileCounter: prevGameStats.tileCounter + 2,
-            survivalLifes: prevGameStats.survivalLifes + 1,
-            stepCounter: prevGameStats.stepCounter + 1
-          };
-          localStorage.setItem('gameStats', JSON.stringify(updatedGameStats));
-          return updatedGameStats;
-        });
-        //выбирает случайное значение из объекта messages в соответствии с выбранным языком
-        const randomSuccessMessage =
-          messages[currentLanguage].Success[Math.floor(Math.random() * messages[currentLanguage].Success.length)];
-        setDisplayText(randomSuccessMessage);
-
-        //две открытые клетки не равны
+        // совпадение
+        handleMatch();
       } else {
-        //блок игры
-        setGameStats(prevGameStats => {
-          const updatedGameStats = {
-            ...prevGameStats,
-            block: true,
-            survivalLifes: prevGameStats.survivalLifes - 1,
-            stepCounter: prevGameStats.stepCounter + 1
-          };
-          localStorage.setItem('gameStats', JSON.stringify(updatedGameStats));
-          return updatedGameStats;
-        });
-        //если жизни кончились в сурвайвалрежиме, перезапуск игры через 3 сек
-        if (gameStats.survivalLifes === 0 && gameStats.gameMode === "Survival") {
-          setDisplayText(languages[currentLanguage].gameOverMsg);
-          setTimeout(() => {
-            gameReset();
-          }, 3000);
-        }
-        //иначе если игра продолжается -  блокирует игру на таймаут, потом закрывает 2 последние клетки обратно   
-        else {
-          //выбирает случайное значение из объекта messages в соответствии с выбранным языком
-          const randomErrorMessage =
-            messages[currentLanguage].Error[Math.floor(Math.random() * messages[currentLanguage].Error.length)];
-          setDisplayText(randomErrorMessage);
-
-          setTimeout(() => {
-            //прячет клетки
-            setGrid(prevGrid => {
-              const newGrid = [...prevGrid];
-              newGrid[firstSelected.rowIndex][firstSelected.colIndex].hidden = true;
-              newGrid[secondSelected.rowIndex][secondSelected.colIndex].hidden = true;
-              localStorage.setItem('grid', JSON.stringify(newGrid));
-              return newGrid;
-            });
-
-            // сброс клеток в любом случае
-            setGameStats(prevGameStats => {
-              const newGameStats = { ...prevGameStats, block: false };
-              localStorage.setItem('gameStats', JSON.stringify(newGameStats));
-              return newGameStats;
-            });
-          }, 1000);
-        }
+        // не совпадение
+        handleMismatch();
       }
-      // сброс клеток в любом случае
-      setGameStats(prevGameStats => {
-        const newGameStats = { ...prevGameStats, firstSelected: null, secondSelected: null };
-        localStorage.setItem('gameStats', JSON.stringify(newGameStats));
-        return newGameStats;
-      });
-
     }
 
-    //заодно меняем размер клеток игрового поля в зависимости от текущих размеров экрана
+    if (thirdSelected && gameStats.gameType === "Triplets") {
+      // логика для режима Triplets
+      const firstCell = grid[firstSelected.rowIndex][firstSelected.colIndex];
+      const secondCell = grid[secondSelected.rowIndex][secondSelected.colIndex];
+      const thirdCell = grid[thirdSelected.rowIndex][thirdSelected.colIndex];
+
+      if (firstCell.value === secondCell.value && secondCell.value === thirdCell.value) {
+        // совпадение
+        handleMatch();
+      } else {
+        // не совпадение
+        handleMismatch();
+      }
+    }
+
+    // общая логика для обоих режимов
+    //обновляем заодно размер клеток в зависимости от размера окна браузера
     updateTileSize();
     window.addEventListener('resize', updateTileSize);
 
@@ -325,104 +279,110 @@ export default function App() {
       window.removeEventListener('resize', updateTileSize);
     };
 
+    //вызывается, если открытые клетки совпали
+    function handleMatch() {
+      //обновляем счетчики открытых клеток, шагов, +1 жизнь в режиме Survival
+      setGameStats((prevGameStats) => {
+        const updatedGameStats = {
+          ...prevGameStats,
+          tileCounter: prevGameStats.tileCounter + (gameStats.gameType === "Pairs" ? 2 : 3),
+          survivalLifes: prevGameStats.survivalLifes + 1,
+          stepCounter: prevGameStats.stepCounter + 1,
+        };
+        localStorage.setItem('gameStats', JSON.stringify(updatedGameStats));
+        return updatedGameStats;
+      });
 
-  }, [grid]);
+      //выводим случайное сообщение об успехе на выбранном языке
+      const randomSuccessMessage = messages[currentLanguage].Success[
+        Math.floor(Math.random() * messages[currentLanguage].Success.length)
+      ];
+      setDisplayText(randomSuccessMessage);
+      //сброс выбранных клеток и разблокировка игры
+      resetGameStats();
+    }
 
-  
-  // та же логика для режима Триплет, нужно переработать!
-  useEffect(() => {
+    //вызывается, если открытые клетки не совпали
+    function handleMismatch() {
+      //блок игры на 1 сек, +1 к счетчику шагов, -1 жизнь в режиме Survival
+      setGameStats((prevGameStats) => {
+        const updatedGameStats = {
+          ...prevGameStats,
+          block: true,
+          survivalLifes: prevGameStats.survivalLifes - 1,
+          stepCounter: prevGameStats.stepCounter + 1,
+        };
+        localStorage.setItem('gameStats', JSON.stringify(updatedGameStats));
+        return updatedGameStats;
+      });
 
-      const { firstSelected, secondSelected, thirdSelected } = gameStats;
-
-      // Если открыты 3 клетки, начинаем сравнивать
-      if (thirdSelected && gameStats.gameType==="Triplets") {
-        const firstCell = grid[firstSelected.rowIndex][firstSelected.colIndex];
-        const secondCell = grid[secondSelected.rowIndex][secondSelected.colIndex];
-        const thirdCell = grid[thirdSelected.rowIndex][thirdSelected.colIndex];
-
-        // Если все три клетки равны - получаем 3 очка в счетчик, 1 жизнь в выживании и игра продолжается
-        if (firstCell.value === secondCell.value && secondCell.value === thirdCell.value) {
-          // Совпадение
-          setGameStats(prevGameStats => {
-            const updatedGameStats = {
-              ...prevGameStats,
-              tileCounter: prevGameStats.tileCounter + 3,
-              survivalLifes: prevGameStats.survivalLifes + 1,
-              stepCounter: prevGameStats.stepCounter + 1
-            };
-            localStorage.setItem('gameStats', JSON.stringify(updatedGameStats));
-            return updatedGameStats;
-          });
-          // Выбираем случайное значение из объекта messages в соответствии с выбранным языком
-          const randomSuccessMessage =
-            messages[currentLanguage].Success[Math.floor(Math.random() * messages[currentLanguage].Success.length)];
-          setDisplayText(randomSuccessMessage);
-
-          // Три открытые клетки не равны
-        } else {
-          // Блок игры
-          setGameStats(prevGameStats => {
-            const updatedGameStats = {
-              ...prevGameStats,
-              block: true,
-              survivalLifes: prevGameStats.survivalLifes - 1,
-              stepCounter: prevGameStats.stepCounter + 1
-            };
-            localStorage.setItem('gameStats', JSON.stringify(updatedGameStats));
-            return updatedGameStats;
-          });
-          // Если жизни кончились в режиме "Survival", перезапускаем игру через 3 секунды
-          if (gameStats.survivalLifes === 0 && gameStats.gameMode === "Survival") {
-            setDisplayText(languages[currentLanguage].gameOverMsg);
-            setTimeout(() => {
-              gameReset();
-            }, 3000);
-          }
-          // Иначе если игра продолжается - блокируем игру на таймаут, потом закрываем 3 последние клетки обратно
-          else {
-            // Выбираем случайное значение из объекта messages в соответствии с выбранным языком
-            const randomErrorMessage =
-              messages[currentLanguage].Error[Math.floor(Math.random() * messages[currentLanguage].Error.length)];
-            setDisplayText(randomErrorMessage);
-
-            setTimeout(() => {
-              // Прячем клетки
-              setGrid(prevGrid => {
-                const newGrid = [...prevGrid];
-                newGrid[firstSelected.rowIndex][firstSelected.colIndex].hidden = true;
-                newGrid[secondSelected.rowIndex][secondSelected.colIndex].hidden = true;
-                newGrid[thirdSelected.rowIndex][thirdSelected.colIndex].hidden = true;
-                localStorage.setItem('grid', JSON.stringify(newGrid));
-                return newGrid;
-              });
-
-              // Сбрасываем клетки в любом случае
-              setGameStats(prevGameStats => {
-                const newGameStats = { ...prevGameStats, block: false };
-                localStorage.setItem('gameStats', JSON.stringify(newGameStats));
-                return newGameStats;
-              });
-            }, 1000);
-          }
-        }
-        // Сбрасываем клетки в любом случае
-        setGameStats(prevGameStats => {
-          const newGameStats = { ...prevGameStats, firstSelected: null, secondSelected: null, thirdSelected: null };
-          localStorage.setItem('gameStats', JSON.stringify(newGameStats));
-          return newGameStats;
+      //геймовер в режиме Survival, если жизни кончились
+      if (gameStats.survivalLifes === 0 && gameStats.gameMode === "Survival") {
+        setDisplayText(languages[currentLanguage].gameOverMsg);
+        setGameStats((prevGameStats) => {
+          const updatedGameStats = {
+            ...prevGameStats,
+            gameOver: true,
+          };
+          localStorage.setItem('gameStats', JSON.stringify(updatedGameStats));
+          return updatedGameStats;
         });
+      } else {
+        //иначе выводим случайное сообщение об ошибке на выбранном языке
+        const randomErrorMessage = messages[currentLanguage].Error[
+          Math.floor(Math.random() * messages[currentLanguage].Error.length)
+        ];
+        setDisplayText(randomErrorMessage);
+        
+        setTimeout(() => {
+          setGrid((prevGrid) => {
+            //прячем клетки обратно 
+            const newGrid = [...prevGrid];
+            newGrid[firstSelected.rowIndex][firstSelected.colIndex].hidden = true;
+            newGrid[secondSelected.rowIndex][secondSelected.colIndex].hidden = true;
+            if (gameStats.gameType === "Triplets") {
+              newGrid[thirdSelected.rowIndex][thirdSelected.colIndex].hidden = true;
+            }
+            localStorage.setItem('grid', JSON.stringify(newGrid));
+            return newGrid;
+          });
+          //сбрасываем значения выбранных клеток
+          resetGameStats();
+        }, 1000);
       }
+    }
+
+    //вызывается после проверки совпадений, сбрасывает значения и разблокирует игру
+    function resetGameStats() {
+      setGameStats((prevGameStats) => {
+        const newGameStats = {
+          ...prevGameStats,
+          block: false,
+          firstSelected: null,
+          secondSelected: null,
+          thirdSelected: null,
+        };
+        localStorage.setItem('gameStats', JSON.stringify(newGameStats));
+        return newGameStats;
+      });
+    }
   }, [grid]);
+
   
-  //срабатывает в случае, если счетчик равен площади игрового поля
+  //срабатывает в случае, если счетчик равен площади игрового поля - победа в игре
   useEffect(() => {
     if (gameStats.tileCounter === gameStats.gridSize * gameStats.gridSize) {
       //победа, блок и перезапуск через 3 сек
       setDisplayText(`${languages[currentLanguage].victoryMsg} ${gameStats.stepCounter}`);
-      setGameStats(prevGameStats => ({ ...prevGameStats, block: true }));
-      setTimeout(() => {
-        gameReset();
-      }, 3000);
+      setGameStats((prevGameStats) => {
+        const updatedGameStats = {
+          ...prevGameStats,
+          gameOver: true,
+          block: true,
+        };
+        localStorage.setItem('gameStats', JSON.stringify(updatedGameStats));
+        return updatedGameStats;
+      });
     }
   }, [gameStats.tileCounter, gameStats.gridSize]);
 
@@ -485,7 +445,11 @@ export default function App() {
       {/** кнопки */}
       <div className="button-container">
         {/** кнопка смены темы */}
-        <button id="theme-button" onClick={() => changeTheme()}>
+        <button id="theme-button" onClick={() => {
+          if (!gameStats.gameOver) {
+            changeTheme();
+          }
+        }}>
           {languages[currentLanguage].theme}: {pictures[gameStats.theme][0]}
         </button>
         {/** кнопка настроек */}
@@ -512,7 +476,7 @@ export default function App() {
             <h2>{languages[currentLanguage].settings}</h2>
           </div>
 
-          {/** выбор языка */}
+          {/** выбор языка - меняется мгновенно */}
           <label>{languages[currentLanguage].language}:</label>
           <select
             value={currentLanguage}
@@ -544,7 +508,7 @@ export default function App() {
           </div>
 
 
-          {/** размер поля */}
+          {/** выбор размера поля - по 3 на каждый тип игры */}
           <label>{languages[currentLanguage].fieldSize}:</label>
           <select
             value={tempGameStats.gridSize}
@@ -561,7 +525,7 @@ export default function App() {
               )))}
           </select>
 
-          {/** выбор сложности */}
+          {/** выбор сложности - от 2 до max */}
           <label>{languages[currentLanguage].difficultyLabel}:</label>
           <input
             type="range"
@@ -573,7 +537,7 @@ export default function App() {
           />
           <span>{tempGameStats.gridSize === "4" && tempGameStats.difficulty > 8 ? "8" : tempGameStats.difficulty}</span>
 
-          {/* режим игры */}
+          {/* выбор режима игры - обычный или выживание */}
           <label>{languages[currentLanguage].gameModeLabel}</label>
           <select
             value={tempGameStats.gameMode}
@@ -602,8 +566,17 @@ export default function App() {
         </div>
       )}
 
+
       {/** основное игровое поле */}
       <div id="grid-container" style={{}}>
+
+        {/** кнопка перезагрузки, если игра закончена */}
+        {gameStats.gameOver && !showSettings && (
+        <div onClick={gameReset} id="gameOver-button"
+          style={{ width: tileSize*1.5 + 'px', height: tileSize*1.5 + 'px', fontSize: tileSize > 0 ? tileSize * 1.5 : 0, opacity: gameStats.gameOver ? 1 : 0,}}>
+          &#8635;
+        </div>
+        )}
 
         {grid.map((rowArr, rowIndex) => (
           <div key={rowIndex} style={{ display: "flex" }}>
