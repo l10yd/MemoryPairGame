@@ -1,5 +1,5 @@
 /* app.css 
-добавить: картинки вместо цифр(v), заменить сложности(v), звуки, темную тему, изменить оформление, !переработать useEffect для проверки совпадений открытых клеток(v)
+добавить: звуки (+-), темную тему (+-), изменить оформление, кнопки настройки и тема тоже иконками, изменить меню настроек, переписать все через Redux Toolkit и разбить на компоненты
 */
 body {
   margin: 0;
@@ -11,14 +11,7 @@ body {
 }
 
 .App {
-  width: 100%;
-  height: 100vh; /* Замените на 100% или другое значение по вашему усмотрению */
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center; 
-  text-align: center;
-  justify-content: center;
+  font-family: Roboto;
 }
 
 #grid-container {
@@ -38,7 +31,6 @@ body {
   width: 175px;
   height: 175px;
   font-size: 175px;
-
   fill: white; /* Белый цвет внутреннего элемента */
   user-select: none;
   border: none;
@@ -55,6 +47,7 @@ body {
   padding: 30px;
 }
 
+/* анимированная кнопка ресет после геймовера */
 .overlay.animated {
   opacity: 0;
   visibility: hidden;
@@ -109,37 +102,35 @@ body {
   z-index: 1;
   user-select: none;
 }
-
+/* 4 кнопки над игровым полем */
 .button-container {
   width: 300px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  grid-template-rows: repeat(2, 1fr);
+  grid-template-columns: repeat(4, 1fr); /* Изменили количество столбцов на 4 */
+  grid-template-rows: 1fr; /* Убрали повторение строк, оставив только одну строку */
   grid-column-gap: 0px;
   grid-row-gap: 0px;
+  margin-bottom: 10px;
+  cursor: pointer;  
 }
 
-.sound-button { grid-area: 1 / 1 / 3 / 2; justify-self: center; align-self: center;}
-#theme-button { grid-area: 1 / 2 / 2 / 3; }
-#settings-button { grid-area: 2 / 2 / 3 / 3; }
-.darkmode-button { grid-area: 1 / 3 / 3 / 4; justify-self: center; align-self: center;}
+.settings-button { grid-area: 1 / 1 / 2 / 2; justify-self: center; align-self: center; }
+.theme-button { grid-area: 1 / 2 / 2 / 3; justify-self: center; align-self: center; font-size: 40px; user-select: none; }
+.sound-button { grid-area: 1 / 3 / 2 / 4; justify-self: center; align-self: center; }
+.darkmode-button { grid-area: 1 / 4 / 2 / 5; justify-self: center; align-self: center; } 
 
-#settings-button, #theme-button {
-  margin: 5px 0;
-  width: 100px;
-  font-size: 14px;
-  justify-self: center; 
-  align-self: center;
-}
-
-.gameType-container {
-  display: flex; /* Устанавливаем контейнеру flex-контейнером */
-  align-items: center; /* Выравниваем элементы по вертикали по центру */
-  margin-bottom: 5px;
+/* Добавляем анимацию для кнопок при активации */
+.button-container .settings-button:active,
+.button-container .theme-button:active,
+.button-container .sound-button:active,
+.button-container .darkmode-button:active {
+  transform: translateY(3px); /* Сдвигаем кнопку вниз на 3 пикселя */
+  transition: transform 0.1s; /* Длительность и плавность анимации */
 }
 
 
+/* окно настроек */
 .settings-dialog {
   position: absolute;
   overflow: hidden;
@@ -149,8 +140,8 @@ body {
   padding: 20px;
   background: white;
   border: 2px solid #333;
-  border-radius: 5px;
-  width: 300px;
+  border-radius: 10px;
+  width: 325px;
   z-index: 2;
   user-select: none;
 }
@@ -161,6 +152,7 @@ body {
   justify-content: space-between;
 }
 
+/* кнопка закрыть настройки*/
 .close-button {
   position: absolute;
   top: 10px;
@@ -169,6 +161,7 @@ body {
   font-size: 24px;
 }
 
+/*заголовок Settings*/
 h2 {
   margin: 0;
   font-size: 24px;
@@ -177,23 +170,67 @@ h2 {
   transform: translateY(-25%);
 }
 
+/* меню настроек */
+.menu-item {
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* Определяем ширину столбцов */
+  align-items: center;
+  margin-top: -10px;
+  margin-bottom: -10px;
+}
 
-label {
-  display: block;
+.menu-item label {  
+  display: flex; /* Добавляем flex-контейнер для центрирования по горизонтали */
+  justify-content: center; /* Центрируем содержимое по горизонтали */
+  align-items: center; /* Центрируем содержимое по вертикали */
+  text-align: center;
+  min-width: 66px; /* Минимальная ширина для label */
+}
+
+.menu-item ul {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center; /* Центрируем элементы списка по горизонтали */
+  min-width: 200px; /* Минимальная ширина для ul */
+}
+
+.menu-item li {
+  cursor: pointer;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+/* Добавляем анимацию для кнопок при активации */
+.menu-item li:active, .reset-button {
+  transform: translateY(2px); /* Сдвигаем кнопку вниз на 3 пикселя */
+  transition: transform 0.1s; /* Длительность и плавность анимации */
+}
+
+.menu-item li.selected {
+  background-color: #333; /* Изменить цвет фона для выбранных элементов */
+  color: #ccc; /* Изменить цвет текста для выбранных элементов */
+}
+
+.menu-item li:hover {
+  background-color: #555;
+  color: #ccc;
+}
+
+.reset-button {
+  align-items: center;
+  margin: 0 auto; 
+  margin-top: 15px;
   margin-bottom: 5px;
-  font-weight: bold;
-}
-
-select {
-  width: 100%;
-  padding: 5px;
-  margin-bottom: 10px;
-}
-
-button {
+  width: 200px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  font-family: Roboto;
+  text-align: center;
   display: block;
   background: #777;
-  width:100%;
   color: white;
   border: none;
   padding: 10px;
@@ -202,10 +239,9 @@ button {
   user-select: none;
 }
 
-.settings-dialog label,
-.settings-dialog select,
-.settings-dialog button {
-  display: block;
+.reset-button:hover {
+  background-color: #333; 
+  color: #ccc;
 }
 
 button:hover {
@@ -216,15 +252,6 @@ button:active {
   background-color: #333; 
 }
 
-.reset-button {
-  right: 50px;
-}
-
-.theme-button {
-  left: 50px;  
-}
-
-
 .gameboard {
   width: 100%;
   height: 100%; 
@@ -234,4 +261,9 @@ button:active {
   padding: 10px;
   margin: auto;
   boxSizing: border-box;
+}
+
+body * {
+  -webkit-tap-highlight-color: transparent; /* Убирает выделение синим */
+  outline: none; /* Убирает обводку, когда элемент активен */
 }
