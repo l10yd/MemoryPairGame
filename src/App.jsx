@@ -31,8 +31,12 @@ export default function App() {
 
   const [showSettings, setShowSettings] = useState(false);
   const [grid, setGrid] = useState([]);
-  
-  //это в первый редусер, просто статы текущей игры
+
+  //время игры, выводится при победе, сбрасывается при перезапуске
+  const [timer, setTimer] = useState("00:00");
+
+  //надо переработать все в redux toolkit
+  //1 - просто статы текущей игры
   const [gameStats, setGameStats] = useState({
     soundOn: false, //-
     darkmode: false, //-
@@ -48,12 +52,11 @@ export default function App() {
     gameMode: "Classic", //-
     stepCounter: 0, //счетчик шагов, обновляется при открытии 2х-3х клеток, выводится при победе
     tileCounter: 0, //счетчик открытых клеток, если равен площади квадрата поля - победа
-    time: 0, //в конце будем выводить затраченное время
     survivalLifes: 8, //жизни для режима Survival
   });
 
  /*
-  //это настройки, влияющие на логику
+  //2 - настройки, влияющие на логику
   const [gameSettings, setGameSettings] = useState({
     gridSize: 4, //длина квадрата поля
     difficulty: 3, //сложность, влияет на количество уникальных элементов
@@ -61,7 +64,7 @@ export default function App() {
     gameMode: "Classic", //режим игры, обычный или выживание
   })
 
-  //это нужно будет в четвертый редусер, настройки, не относящиеся к логике
+  //3 - настройки, не относящиеся к логике
   const [miscSettings, setMiscSettings] = useState({
     showSettings: false,
     language: "russian",
@@ -70,7 +73,7 @@ export default function App() {
     theme: 'Fruits',
   })
 
-  //это нулевой редусер для сетки клеток
+  //4 - для сетки клеток
   const [tileMap, setTileMap] = useState({
     grid: [],
     pics: [],
@@ -115,7 +118,7 @@ export default function App() {
   //смена языка
   const [currentLanguage, setCurrentLanguage] = useState('russian');
   //размер одной клетки игрового поля
-  const [tileSize, setTileSize] = useState(40);
+  const [tileSize, setTileSize] = useState(74);
 
   //для смены языка
   const toggleLanguage = (lang) => {
@@ -159,7 +162,7 @@ export default function App() {
     const savedGameStats = JSON.parse(localStorage.getItem('gameStats'));
     if (savedGameStats) {
       //блок снимаем на всякий случай
-      setGameStats((prevGameStats) => ({ ...savedGameStats, block: false }));
+      setGameStats((prevGameStats) => ({ ...savedGameStats, block: false, darkmode: false }));      
     }
 
     //тоже загружаем, иначе после загрузки -> победе/поражении слетают настройки при перезапуске игры
@@ -181,7 +184,46 @@ export default function App() {
       setDisplayText(savedText);
     }
 
+    //загрузка времени текущей игровой сессии
+    const savedTimer = localStorage.getItem('timer');
+    if (savedTimer) {
+      setTimer(savedTimer);
+    }
+
   }, []);
+
+  //таймер, считает время в строку "00:00"
+  useEffect(() => {
+    let intervalId;
+
+    if (!gameStats.gameOver && !showSettings) {
+      intervalId = setInterval(() => {
+        setTimer((prevTimer) => {
+          // разбиваем строку на минуты и секунды
+          const timeParts = prevTimer.split(":");
+          let minutes = parseInt(timeParts[0], 10);
+          let seconds = parseInt(timeParts[1], 10);
+
+          if (seconds === 59) {
+            minutes += 1;
+            seconds = 0;
+          } else {
+            seconds += 1;
+          }
+          
+          //собираем ее обратно
+          const newTime = `${minutes < 10 ? '0' : ''}${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+          localStorage.setItem('timer', newTime);
+          return newTime;
+        });
+      }, 1000); //каждую секунду
+    }
+
+    return () => {
+      clearInterval(intervalId);
+    };
+    //останавливается, если открыты настройки или игра окончена
+  }, [gameStats.gameOver, showSettings]);
 
   //перезагрузка игры с сохранением настроек
   const gameReset = () => {
@@ -215,6 +257,8 @@ export default function App() {
       return newGameStats;
     });
 
+    setTimer("00:00");
+    
     const newGrid = generateNewGrid(newGridSize, newDifficulty, newGameType);
     setGrid(newGrid);
     localStorage.setItem('grid', JSON.stringify(newGrid));
@@ -321,15 +365,15 @@ export default function App() {
       }
     }
 
-    // общая логика для обоих режимов
-    //обновляем заодно размер клеток в зависимости от размера окна браузера
+    //обновляем размер клеток в зависимости от размера окна браузера
     updateTileSize();
     window.addEventListener('resize', updateTileSize);
 
     return () => {
       window.removeEventListener('resize', updateTileSize);
     };
-
+    
+    // общая логика для обоих режимов
     //вызывается, если открытые клетки совпали
     function handleMatch() {
       //обновляем счетчики открытых клеток, шагов, +1 жизнь в режиме Survival
@@ -424,7 +468,8 @@ export default function App() {
   useEffect(() => {
     if (gameStats.tileCounter === gameStats.gridSize * gameStats.gridSize) {
       //победа, блок и перезапуск через 3 сек
-      setDisplayText(`${languages[currentLanguage].victoryMsg} ${gameStats.stepCounter}`);
+      //строка типа Победа! Шаги: 10, Время: 01:04
+      setDisplayText(`${languages[currentLanguage].victoryMsg} ${gameStats.stepCounter}, ${languages[currentLanguage].timePassed} ${timer}`);
       setGameStats((prevGameStats) => {
         const updatedGameStats = {
           ...prevGameStats,
@@ -435,6 +480,7 @@ export default function App() {
         return updatedGameStats;
       });
     }
+
   }, [gameStats.tileCounter, gameStats.gridSize]);
 
   //смена темы - устанавливается следующее по кругу значение из pictures в gameStats
@@ -502,10 +548,12 @@ export default function App() {
     }));
   }, [tempGameStats.gridSize]);
 
+  //рендер
   return (
     <div className="App">
 
       {/** кнопки */}
+
       <div className="button-container">
 
         {/** кнопка выключения/включения звука */}
@@ -538,8 +586,47 @@ export default function App() {
 
       </div>
 
+      {/** основное игровое поле */}
+      <div id="grid-container" style={{}}>
+        
+        {/** кнопка перезагрузки, если игра закончена */}
+        <div className={`overlay animated ${gameStats.gameOver && !showSettings ? "show" : ""}`}>      
+      <svg className="gameOver-button" onClick={gameReset} style={{backgroundColor: gameStats.darkmode ? "darkgreen" : "forestgreen", fill: gameStats.darkmode ? "#ccc" : "white"}} height="32px" version="1.1" viewBox="0 0 32 32" width="32px" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink"><path d="M28,16c-1.219,0-1.797,0.859-2,1.766C25.269,21.03,22.167,26,16,26c-5.523,0-10-4.478-10-10S10.477,6,16,6  c2.24,0,4.295,0.753,5.96,2H20c-1.104,0-2,0.896-2,2s0.896,2,2,2h6c1.104,0,2-0.896,2-2V4c0-1.104-0.896-2-2-2s-2,0.896-2,2v0.518  C21.733,2.932,18.977,2,16,2C8.268,2,2,8.268,2,16s6.268,14,14,14c9.979,0,14-9.5,14-11.875C30,16.672,28.938,16,28,16z"/></svg>
+              </div>
+
+        {/** маппятся все клетки */}
+        {grid.map((rowArr, rowIndex) => (
+          <div key={rowIndex} style={{ display: "flex" }}>
+            {rowArr.map((cell, colIndex) => (
+              <div
+                className={`tile`}
+                style={{ width: tileSize + 'px', height: tileSize + 'px', fontSize: tileSize > 0 ? tileSize / 2 : 0, borderColor: gameStats.darkmode ? "#555" : "#ccc" }}
+                key={colIndex}
+                onClick={() => !gameStats.block && onClickTile(rowIndex, colIndex)}
+              >
+                <div className="tile-picture" style={{ opacity: cell.hidden ? 0 : 1 }}>
+                  {cell.hidden ? null : pics[gameStats.theme][cell.value - 1]}
+                </div>                 
+              </div>
+            ))}
+          </div>
+        ))}
+
+      </div>
+
+      {/** счетчик жизней, выводится только в режиме Survival */}
+      <div className="survival-mode-counter">
+        {gameStats.gameMode === "Survival" && `${languages[currentLanguage].survivalMsg}: ${gameStats.survivalLifes + 1}`}
+      </div>
+
+      {/** здесь всякий текст, режимы игры, сообщения о прогрессе/завершении */}
+      <div className="display-text">
+        {displayText}
+      </div>
+
       {/** окно настроек */}
-      {showSettings && (
+      <div className="wrapper">
+      <div className={`overlay animated ${showSettings ? "show" : ""}`}>  
         <div className="settings-dialog" style={{ color: gameStats.darkmode ? "#555" : "black", backgroundColor: gameStats.darkmode ? "black" : "white" }}>
           <div className="settings-header">
             {/** нажатие на крестик закрывает окно и разблокирует игру */}
@@ -549,7 +636,7 @@ export default function App() {
             }}>
               &#10006;
             </span>
-            <h2>{languages[currentLanguage].settings}</h2>
+            <h2 className="settings-label">{languages[currentLanguage].settings}</h2>
           </div>
 
           {/** выбор языка - меняется мгновенно */}
@@ -636,47 +723,9 @@ export default function App() {
             {languages[currentLanguage].reset}
           </div>
         </div>
-      )}
-
-
-
-      {/** основное игровое поле */}
-      <div id="grid-container" style={{}}>
-
-        {/** кнопка перезагрузки, если игра закончена */}
-        <div className={`overlay animated ${gameStats.gameOver && !showSettings ? "show" : ""}`}>        
-      <svg className="gameOver-button" onClick={gameReset} height="32px" version="1.1" viewBox="0 0 32 32" width="32px" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink"><path d="M28,16c-1.219,0-1.797,0.859-2,1.766C25.269,21.03,22.167,26,16,26c-5.523,0-10-4.478-10-10S10.477,6,16,6  c2.24,0,4.295,0.753,5.96,2H20c-1.104,0-2,0.896-2,2s0.896,2,2,2h6c1.104,0,2-0.896,2-2V4c0-1.104-0.896-2-2-2s-2,0.896-2,2v0.518  C21.733,2.932,18.977,2,16,2C8.268,2,2,8.268,2,16s6.268,14,14,14c9.979,0,14-9.5,14-11.875C30,16.672,28.938,16,28,16z"/></svg>
-              </div>
-
-        {/** маппятся все клетки */}
-        {grid.map((rowArr, rowIndex) => (
-          <div key={rowIndex} style={{ display: "flex" }}>
-            {rowArr.map((cell, colIndex) => (
-              <div
-                className={`tile`}
-                style={{ width: tileSize + 'px', height: tileSize + 'px', fontSize: tileSize > 0 ? tileSize / 2 : 0, borderColor: gameStats.darkmode ? "#555" : "#ccc" }}
-                key={colIndex}
-                onClick={() => !gameStats.block && onClickTile(rowIndex, colIndex)}
-              >
-                <div className="tile-picture" style={{ opacity: cell.hidden ? 0 : 1 }}>
-                  {cell.hidden ? null : pics[gameStats.theme][cell.value - 1]}
-                </div>
-              </div>
-            ))}
-          </div>
-        ))}
-
       </div>
-
-      {/** счетчик жизней, выводится только в режиме Survival */}
-      <div className="survival-mode-counter">
-        {gameStats.gameMode === "Survival" && `${languages[currentLanguage].survivalMsg}: ${gameStats.survivalLifes + 1}`}
-      </div>
-
-      {/** здесь всякий текст, режимы игры, сообщения о прогрессе/завершении */}
-      <div className="display-text">
-        {displayText}
-      </div>
+        </div>
+      
 
     </div>
   );
