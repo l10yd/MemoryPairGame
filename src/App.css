@@ -1,5 +1,5 @@
 /* app.css 
-добавить: звуки (+-), темную тему (+-), изменить оформление, кнопки настройки и тема тоже иконками, изменить меню настроек, переписать все через Redux Toolkit и разбить на компоненты, пофиксить загрузку темной темы
+добавить: звуки (+-), темную тему (+-), переписать все через Redux Toolkit и разбить на компоненты, пофиксить загрузку темной темы, режим TimeRun
 */
 body {
   margin: 0;
@@ -104,7 +104,11 @@ body {
   transition: all 0.5s ease; 
 }
 
-.display-text, .survival-mode-counter {
+.text-container {
+  
+}
+
+.display-text, .gamemode-counter {
   margin-top: 5px;
   text-align: center;
   /*font-size: 1vw;

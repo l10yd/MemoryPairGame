@@ -34,7 +34,7 @@ const shufflePictures = (pictures) => {
 const generateNewGrid = (arraySize, difficulty, gameType) => {
 
   //заполняем одномерный массив числами от 1 до difficulty (кол-во уникальных элементов)
-  const values = Array.from({ length: difficulty }, (_, index) => index + 1); 
+  const values = Array.from({ length: difficulty }, (_, index) => index + 1);
 
   //наполняем еще один массив парами или тройками элементов из values, пока его длина не будет равна площади игрового поля (1,1,2,2 и тд)
   const length = gameType === "Pairs" ? (arraySize * arraySize) / 2 : (arraySize * arraySize) / 3;
@@ -42,7 +42,7 @@ const generateNewGrid = (arraySize, difficulty, gameType) => {
     const duplicatedValues = Array.from({ length: gameType === "Pairs" ? 2 : 3 }, () => values[i % difficulty]);
     return duplicatedValues;
   }).flat();
-  
+
   //перемешиваем одномерный массив 
   const shuffled = shuffleArray(filledValues);
 
@@ -54,14 +54,46 @@ const generateNewGrid = (arraySize, difficulty, gameType) => {
 
   //добавляем в него флаги hidden, получается основа для игровой сетки
   const initialGrid = shuffledMatrix.map(row =>
-      row.map(value => ({
-        hidden: true,
-        value: value,
-      }))
-    );
+    row.map(value => ({
+      hidden: true,
+      value: value,
+    }))
+  );
 
   return initialGrid;
 
 }
 
-export { shuffleArray, shufflePictures, generateNewGrid };
+//переводит целое число в строку формата "02:15"
+const secondsToString = (totalSeconds) => {
+  //обрабатываем отрицательные значения
+  if (totalSeconds < 0) {
+    totalSeconds = 0;
+  }
+  //рассчитываем минуты и секунды
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  return `${minutes < 10 ? '0' : ''}${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+}
+
+//для обновления таймера 
+//получает время строкой ("02:30"), режим игры ("TimeRun"), число, которое нужно добавить
+const updateTimer = (time, secondsToAdd) => {
+  const timeParts = time.split(":");
+  let minutes = parseInt(timeParts[0], 10);
+  let seconds = parseInt(timeParts[1], 10);
+
+  //преобразовываем время в секунды
+  let totalSeconds = minutes * 60 + seconds;
+
+  //добавляем или вычитаем секунды
+  totalSeconds += secondsToAdd;
+
+  //переводим секунды в строку
+  const newTime = secondsToString(totalSeconds);
+
+  return newTime;
+}
+
+export { shufflePictures, generateNewGrid, updateTimer, secondsToString };
