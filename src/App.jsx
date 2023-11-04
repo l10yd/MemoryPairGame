@@ -205,7 +205,8 @@ export default function App() {
       intervalId = setInterval(() => {
         setTimer((prevTimer) => {
           // передаем время ("00:05") и +1/-1 секунду в зависимости от режима
-          const sec = gameStats.gameMode === "TimeRun" ? (-1) : 1;
+          const sec = gameStats.gameMode === "TimeRun" || gameStats.gameMode === "TimeSurvival" ? -1 : 1;
+          //функция из gameUtils
           const newTime = updateTimer(prevTimer.timePassed, sec)
           const newTimer = { ...prevTimer, timePassed: newTime };
           localStorage.setItem('timer', JSON.stringify(newTimer));
@@ -265,7 +266,7 @@ export default function App() {
     });
 
     //в режиме таймран время идет в обратную сторону
-    if (newGameMode !== "TimeRun") {
+    if (newGameMode !== "TimeRun" && newGameMode!=="TimeSurvival") {
       setTimer({ timePassed: "00:00" });
     }
     else {
@@ -404,7 +405,7 @@ export default function App() {
       });
 
       //в режиме TimeRun получает +N (пока что gridSize) сек
-      if (gameStats.gameMode === "TimeRun") {
+      if (gameStats.gameMode === "TimeRun" || gameStats.gameMode === "TimeSurvival") {
         setTimer((prevTimer) => {
           const updatedTime = updateTimer(prevTimer.timePassed, parseInt(gameStats.gridSize, 10));
           const updatedTimer = {
@@ -440,7 +441,7 @@ export default function App() {
       });
 
       //геймовер в режиме Survival, если жизни кончились
-      if (gameStats.survivalLifes === 0 && gameStats.gameMode === "Survival") {
+      if (gameStats.survivalLifes === 0 && (gameStats.gameMode === "Survival" || gameStats.gameMode==="TimeSurvival")) {
         setDisplayText(languages[currentLanguage].gameOverMsg);
         setGameStats((prevGameStats) => {
           const updatedGameStats = {
@@ -498,7 +499,7 @@ export default function App() {
       //победа, блок и перезапуск через 3 сек
       //строка типа "Победа! Шаги: 10"(если не TimeRun: +" , Время: 01:04")
       setDisplayText(
-        `${languages[currentLanguage].victoryMsg} ${gameStats.stepCounter}${gameStats.gameMode !== "TimeRun"
+        `${languages[currentLanguage].victoryMsg} ${gameStats.stepCounter}${(gameStats.gameMode !== "TimeRun" && gameStats.gameMode !== "TimeSurvival")
           ? `, ${languages[currentLanguage].timePassed} ${timer.timePassed}`
           : ""
         }`
@@ -647,11 +648,12 @@ export default function App() {
 
       </div>
 
-      {/** счетчик жизней для Survival и таймер для TimeRun */}
+      {/** счетчик жизней для Survival и таймер для TimeRun и оба для TimeSurvival */}
       <div className="text-container">
       <div className="gamemode-counter">
         {gameStats.gameMode === "Survival" && `${languages[currentLanguage].survivalMsg} ${gameStats.survivalLifes + 1}`}
         {gameStats.gameMode === "TimeRun" && `${languages[currentLanguage].timeRunMsg} ${timer.timePassed}`}
+        {gameStats.gameMode === "TimeSurvival" && `${languages[currentLanguage].survivalMsg} ${gameStats.survivalLifes + 1}, ${languages[currentLanguage].timeRunMsg} ${timer.timePassed}`}
       </div>
 
       {/** здесь всякий текст, режимы игры, сообщения о прогрессе/завершении */}
@@ -737,7 +739,7 @@ export default function App() {
             <div className="menu-item">
               <label>{languages[currentLanguage].gameModeLabel}</label>
               <ul>
-                {["Classic", "Survival", "TimeRun"].map((gameMode, index) => (
+                {["Classic", "Survival", "TimeRun", "TimeSurvival"].map((gameMode, index) => (
                   <li key={index} className={tempGameStats.gameMode === gameMode ? "selected" : ""} onClick={() => handleSelectChange('gameMode', gameMode)}>
                     {languages[currentLanguage].gameMode[gameMode]}
                   </li>

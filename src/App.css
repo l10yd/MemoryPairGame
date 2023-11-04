@@ -213,15 +213,18 @@ body {
   justify-content: center; /* Центрируем содержимое по горизонтали */
   align-items: center; /* Центрируем содержимое по вертикали */
   text-align: center;
-  min-width: 66px; /* Минимальная ширина для label */
+  min-width: 75px; /* Минимальная ширина для label */
 }
 
 .menu-item ul {
+  margin-block-start: 0.75em;
+  margin-block-end: 0.75em;
+  padding-inline-start: 0px;
   list-style: none;
   display: flex;
   flex-wrap: wrap;
   justify-content: center; /* Центрируем элементы списка по горизонтали */
-  min-width: 200px; /* Минимальная ширина для ul */
+  min-width: 225px; /* Минимальная ширина для ul */
 }
 
 .menu-item li {
@@ -229,6 +232,7 @@ body {
   padding: 8px;
   border: 1px solid #ccc;
   border-radius: 5px;
+  margin: 3px;
 }
 
 /* Добавляем анимацию для кнопок при активации */
