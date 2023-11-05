@@ -64,6 +64,17 @@ const generateNewGrid = (arraySize, difficulty, gameType) => {
 
 }
 
+//переводит строку формата "01:06" в целое число
+const stringToSeconds = (time) => {
+  const timeParts = time.split(":");
+  const minutes = parseInt(timeParts[0], 10);
+  const seconds = parseInt(timeParts[1], 10);
+
+  //преобразовываем время в секунды
+  const totalSeconds = minutes * 60 + seconds;
+  return totalSeconds;
+}
+
 //переводит целое число в строку формата "02:15"
 const secondsToString = (totalSeconds) => {
   //обрабатываем отрицательные значения
@@ -78,14 +89,11 @@ const secondsToString = (totalSeconds) => {
 }
 
 //для обновления таймера 
-//получает время строкой ("02:30"), режим игры ("TimeRun"), число, которое нужно добавить
+//получает время строкой ("02:30"), и число, которое нужно добавить
 const updateTimer = (time, secondsToAdd) => {
-  const timeParts = time.split(":");
-  let minutes = parseInt(timeParts[0], 10);
-  let seconds = parseInt(timeParts[1], 10);
 
-  //преобразовываем время в секунды
-  let totalSeconds = minutes * 60 + seconds;
+  //переводим строку в секунды
+  let totalSeconds = stringToSeconds(time);
 
   //добавляем или вычитаем секунды
   totalSeconds += secondsToAdd;
@@ -96,4 +104,4 @@ const updateTimer = (time, secondsToAdd) => {
   return newTime;
 }
 
-export { shufflePictures, generateNewGrid, updateTimer, secondsToString };
+export { shufflePictures, generateNewGrid, updateTimer, secondsToString, stringToSeconds };

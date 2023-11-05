@@ -233,6 +233,7 @@ body {
   border: 1px solid #ccc;
   border-radius: 5px;
   margin: 3px;
+  text-align: center;
 }
 
 /* Добавляем анимацию для кнопок при активации */

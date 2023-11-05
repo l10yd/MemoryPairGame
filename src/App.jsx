@@ -3,6 +3,7 @@ import pictures from "./Pictures"; //картинки, по 16 на каждую
 import messages from "./Messages"; //сообщения об успехе или ошибке
 import languages from "./Languages"; //тексты на разных языках
 import { shufflePictures, generateNewGrid, updateTimer, secondsToString } from "./GameUtils"; //функции для генерации игрового поля и перемешивания картинок, а еще для обновления таймера и перевода числа в строку времени ("01:06")
+import {checkRecord, saveRecord, loadRecord} from "./RecordUtils";
 import './App.css';
 
 //максимальные значения difficulty для каждого gridSize
@@ -35,10 +36,7 @@ export default function App() {
   //время игры, выводится при победе, сбрасывается при перезапуске
   const [timer, setTimer] = useState({
     timePassed: "00:00",
-
   });
-
-
 
   //надо переработать все в redux toolkit
   //1 - просто статы текущей игры
@@ -118,6 +116,8 @@ export default function App() {
   })
   //текст под игровой сеткой выводится
   const [displayText, setDisplayText] = useState(`Поле: 4х4, Сложность: 3.`);
+  //выводит рекорд в настройках для выбранного режима
+  const [record, setRecord] = useState("Нет результатов");
   //картинки хранятся в отдельном объекте, но будут перемешиватсья при ресете
   const [pics, setPics] = useState([]);
   //смена языка
@@ -497,13 +497,6 @@ export default function App() {
   useEffect(() => {
     if (gameStats.tileCounter === gameStats.gridSize * gameStats.gridSize) {
       //победа, блок и перезапуск через 3 сек
-      //строка типа "Победа! Шаги: 10"(если не TimeRun: +" , Время: 01:04")
-      setDisplayText(
-        `${languages[currentLanguage].victoryMsg} ${gameStats.stepCounter}${(gameStats.gameMode !== "TimeRun" && gameStats.gameMode !== "TimeSurvival")
-          ? `, ${languages[currentLanguage].timePassed} ${timer.timePassed}`
-          : ""
-        }`
-      );
       setGameStats((prevGameStats) => {
         const updatedGameStats = {
           ...prevGameStats,
@@ -513,6 +506,15 @@ export default function App() {
         localStorage.setItem('gameStats', JSON.stringify(updatedGameStats));
         return updatedGameStats;
       });
+      //проверяем, если рекорд и сохраняем его
+      checkRecord(gameStats.gameType, gameStats.gridSize, gameStats.difficulty, gameStats.gameMode, timer.timePassed, gameStats.survivalLifes);
+      //строка типа "Победа! Шаги: 10"(если не TimeRun: +" , Время: 01:04")
+      setDisplayText(
+        `${languages[currentLanguage].victoryMsg} ${gameStats.stepCounter}${(gameStats.gameMode !== "TimeRun" && gameStats.gameMode !== "TimeSurvival")
+          ? `, ${languages[currentLanguage].timePassed} ${timer.timePassed}`
+          : ""
+        }`
+      );      
     }
 
   }, [gameStats.tileCounter, gameStats.gridSize]);
@@ -582,6 +584,30 @@ export default function App() {
     }));
   }, [tempGameStats.gridSize]);
 
+  //обновляет строчку лучший результат в настройках, вызывается при открытии окна настроек и любых изменениях их
+  const updateRecordMsg = () => {
+    const record = loadRecord(tempGameStats.gameType, tempGameStats.gridSize, tempGameStats.difficulty, tempGameStats.gameMode);  
+    let recordMsg = "";
+    if (!record) {
+      recordMsg = languages[currentLanguage].recordNotFound
+    }
+    else {
+      console.log(record);
+      if (tempGameStats.gameMode === "Classic" || tempGameStats.gameMode === "TimeRun") {
+        recordMsg = `${languages[currentLanguage].timePassed} ${record.timer}`
+      }
+      else {
+        recordMsg = `${languages[currentLanguage].timePassed} ${record.timer}, ${languages[currentLanguage].survivalMsg} ${record.survivalLifes+1}`;      
+    }
+    }
+    setRecord(recordMsg);    
+  }
+
+  //при любых изменениях настроек обновляет строчку Лучший результат
+ useEffect(()=> {
+   updateRecordMsg(); 
+  }, [tempGameStats, currentLanguage]);
+
   //рендер
   return (
     <div className="App">
@@ -616,6 +642,7 @@ export default function App() {
         <svg className="settings-button" onClick={() => {
           setShowSettings(!showSettings);
           setGameStats(prevGameStats => ({ ...prevGameStats, block: !prevGameStats.block }));
+      updateRecordMsg();  
         }} enableBackground="new 0 0 91 91" height="50px" version="1.1" viewBox="0 0 91 91" width="50px" xmlSpace="preserve" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink"><g stroke={gameStats.darkmode ? "#555" : "black"} strokeWidth="4"><path d="M0.553,40.656c-0.878,6.689,3.811,12.924,10.273,14.14c-0.588,4.404-0.541,8.957-0.76,13.348   C9.774,74.012,8.754,80.368,9.45,86.182c0.586,4.897,7.045,4.906,7.633,0c0.698-5.813-0.324-12.17-0.616-18.038   c-0.217-4.376-0.171-8.915-0.754-13.309c6.126-0.909,11.207-5.365,11.572-12.029c0.374-6.82-4.081-11.881-9.983-13.928   c0.174-4.829-0.454-9.983-0.898-14.692c-0.346-3.67-0.372-7.513-1.56-11.018c-0.525-1.55-2.63-1.554-3.154,0   c-1.194,3.533-1.165,7.324-1.274,11.018c-0.161,5.337-1.283,10.851-1.063,16.187C4.891,31.165,1.095,36.539,0.553,40.656z    M6.157,40.328c0.564-2.598,2.309-4.092,4.169-5.526c0.65,0.807,1.641,1.343,2.98,1.32c3.906-0.068,8.037,2.391,7.551,6.771   c-0.512,4.601-5.636,6.607-9.791,5.565C7.631,47.596,5.411,43.756,6.157,40.328z" /><path d="M32.343,65.47c-0.867,6.613,3.708,12.772,10.057,14.086c-0.04,0.265-1.211,5.969-1.2,6.365c0,0.2,0.017,0.396,0.047,0.589   c0.101,2.715,3.452,4.345,5.737,2.968c3.395-2.046,1.92-6.779,1.289-9.953c5.777-1.154,10.452-5.521,10.802-11.907   c0.358-6.521-3.702-11.426-9.221-13.635c0.292-8.057-0.568-16.348-0.828-24.344c-0.29-8.936-0.125-18.026-1.616-26.857   c-0.263-1.563-2.891-1.563-3.155,0c-1.491,8.831-1.326,17.922-1.615,26.857c-0.264,8.111-1.143,16.533-0.812,24.698   c-0.156,0.25-0.286,0.521-0.387,0.807C36.852,55.743,32.898,61.261,32.343,65.47z M52.648,67.704   c-0.511,4.601-5.637,6.607-9.79,5.565c-3.437-0.86-5.656-4.699-4.911-8.13c0.564-2.598,2.309-4.09,4.17-5.526   c0.526,0.654,1.279,1.123,2.256,1.27c0.748,0.301,1.577,0.356,2.359,0.174C50.066,61.596,53.066,63.936,52.648,67.704z" /><path d="M75.712,3.907c-0.18,0.496-2.262,12.622-2.48,13.242c-4.589,0.6-8.544,6.117-9.096,10.327   c-0.926,7.043,4.324,13.57,11.313,14.278c-0.845,6.583-0.776,13.322-1.02,19.936c-0.298,8.026-1.383,16.498-0.621,24.492   c0.465,4.902,7.165,4.91,7.63,0c0.762-7.996-0.324-16.464-0.619-24.492c-0.246-6.67-0.172-13.468-1.042-20.107   c5.907-1.067,10.731-5.467,11.088-11.957c0.354-6.452-3.615-11.322-9.04-13.563c-0.121-1.791-0.493-3.611-0.673-5.094   c-0.251-2.045-0.168-8.363-3.094-8.944C76.738,1.764,76.16,2.672,75.712,3.907z M84.438,29.71   c-0.511,4.601-5.635,6.607-9.789,5.565c-3.438-0.861-5.657-4.7-4.91-8.128c0.564-2.6,2.309-4.091,4.169-5.528   c0.649,0.806,3.724,1.346,3.783,1.346C81.339,23.219,84.893,25.63,84.438,29.71z" /></g></svg>
 
       </div>
@@ -744,6 +771,16 @@ export default function App() {
                     {languages[currentLanguage].gameMode[gameMode]}
                   </li>
                 ))}
+              </ul>
+            </div>
+
+            {/** Рекорд */}
+            <div className="menu-item">
+              <label>{languages[currentLanguage].recordLabel}</label>
+              <ul>
+                <li>
+                  {record}
+                </li>
               </ul>
             </div>
 
